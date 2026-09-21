@@ -1,0 +1,14 @@
+{
+  "name": "VrcPocketGame.Sample",
+  "rootNamespace": "VrcPocketGame.Sample",
+  "references": ["VrcPocketGame.Runtime", "Unity.TextMeshPro", "UdonSharp.Runtime", "VRC.SDK3", "VRC.SDKBase", "VRC.Udon"],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}

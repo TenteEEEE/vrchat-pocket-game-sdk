@@ -1,0 +1,52 @@
+name: Release VPM package
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  packageName: com.tentee.vrc-pocket-game
+  packagePath: Packages/com.tentee.vrc-pocket-game
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Verify package
+        run: python3 Tools/verify-package.py
+
+      - name: Read package version
+        id: package
+        uses: zoexx/github-action-json-file-properties@b9f36ce6ee6fe2680cd3c32b2c62e22eade7e590
+        with:
+          file_path: ${{ env.packagePath }}/package.json
+          prop_path: version
+
+      - name: Create VPM archive
+        working-directory: ${{ env.packagePath }}
+        run: zip -r "${{ github.workspace }}/${{ env.packageName }}-${{ steps.package.outputs.value }}.zip" .
+
+      - name: Create UnityPackage file list
+        run: find "${{ env.packagePath }}" -name '*.meta' > metaList
+
+      - name: Create UnityPackage
+        uses: pCYSl5EDgo/create-unitypackage@v1.2.3
+        with:
+          package-path: ${{ env.packageName }}-${{ steps.package.outputs.value }}.unitypackage
+          include-files: metaList
+
+      - name: Create release
+        uses: softprops/action-gh-release@de2c0eb89ae2a093876385947365aca7b0e5f844
+        with:
+          tag_name: ${{ steps.package.outputs.value }}
+          name: VRChat Pocket Game SDK ${{ steps.package.outputs.value }}
+          generate_release_notes: true
+          files: |
+            ${{ env.packageName }}-${{ steps.package.outputs.value }}.zip
+            ${{ env.packageName }}-${{ steps.package.outputs.value }}.unitypackage
+            ${{ env.packagePath }}/package.json

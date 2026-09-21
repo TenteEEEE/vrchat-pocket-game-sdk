@@ -1,0 +1,3 @@
+# Preserve line endings byte-for-byte for Unity .meta files and binary assets;
+# upstream export checks compare these files without Git normalization.
+* -text

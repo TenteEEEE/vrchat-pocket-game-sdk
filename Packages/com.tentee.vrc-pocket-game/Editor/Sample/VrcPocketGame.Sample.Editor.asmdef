@@ -1,0 +1,5 @@
+{
+  "name": "VrcPocketGame.Sample.Editor",
+  "references": ["VrcPocketGame.Runtime", "VrcPocketGame.Editor", "VrcPocketGame.Sample", "Unity.TextMeshPro", "UnityEngine.UI", "UdonSharp.Runtime", "UdonSharp.Editor", "VRC.SDK3", "VRC.SDKBase", "VRC.Udon", "VRC.Udon.Editor"],
+  "includePlatforms": ["Editor"]
+}

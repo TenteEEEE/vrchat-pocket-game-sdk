@@ -1,0 +1,22 @@
+{
+  "name": "com.tentee.vrc-pocket-game",
+  "displayName": "VRChat Pocket Game SDK",
+  "version": "0.2.0",
+  "unity": "2022.3",
+  "author": {
+    "name": "TenteEEEE",
+    "url": "https://github.com/TenteEEEE"
+  },
+  "description": "A small terminal pool, session contract, UI shell, and counter sample for VRChat worlds.",
+  "license": "MIT",
+  "keywords": [
+    "vrchat",
+    "worlds",
+    "udonsharp",
+    "terminal",
+    "game"
+  ],
+  "vpmDependencies": {
+    "com.vrchat.worlds": "^3.10.5"
+  }
+}
