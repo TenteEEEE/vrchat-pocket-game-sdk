@@ -156,9 +156,9 @@ namespace VrcPocketGame
         public void RequestReturn(int slotIndex)
         {
             VRCPlayerApi local = Networking.LocalPlayer;
-            if (local == null || !IsSlot(slotIndex) || claimedPlayerIds[slotIndex] != local.playerId) return;
+            if (local == null || !IsSlot(slotIndex) || claimedPlayerIds[slotIndex] != local.playerId) { if (IsSlot(slotIndex) && terminalSessions[slotIndex] != null) terminalSessions[slotIndex].ReportReturnCancelled(); return; }
             // Game has already received OnReturnRequested and may deny by leaving returnApproved false.
-            if (terminalRoots[slotIndex] == null || terminalSessions[slotIndex] == null) return;
+            if (terminalRoots[slotIndex] == null || terminalSessions[slotIndex] == null) { if (terminalSessions[slotIndex] != null) terminalSessions[slotIndex].ReportReturnCancelled(); return; }
             Networking.SetOwner(local, terminalRoots[slotIndex]);
             Networking.SetOwner(local, terminalSessions[slotIndex].gameObject);
             if(terminalSessions[slotIndex].gameEvents!=null) Networking.SetOwner(local,terminalSessions[slotIndex].gameEvents.gameObject);
@@ -171,17 +171,17 @@ namespace VrcPocketGame
         {
             int index = _pendingReturn; if (!IsSlot(index)) return;
             VRCPlayerApi local = Networking.LocalPlayer;
-            if (local == null || local.playerId != _pendingReturnPlayer || claimedPlayerIds[index] != _pendingReturnPlayer || claimGenerations[index] != _pendingReturnGeneration) { _pendingReturn = -1; return; }
+            if (local == null || local.playerId != _pendingReturnPlayer || claimedPlayerIds[index] != _pendingReturnPlayer || claimGenerations[index] != _pendingReturnGeneration) { if (terminalSessions[index] != null) terminalSessions[index].ReportReturnCancelled(); _pendingReturn = -1; return; }
             if (!Networking.IsOwner(gameObject))
             {
                 if (_claimAttempts++ < MaxRetries) { Networking.SetOwner(local, gameObject); SendCustomEventDelayedSeconds(nameof(AttemptReturn), RetryDelay()); }
-                else { terminalSessions[index].CancelReturn(); _pendingReturn = -1; SetStatus("Could not stow terminal; try again."); }
+                else { terminalSessions[index].ReportReturnFailed(); _pendingReturn = -1; SetStatus("Could not stow terminal; try again."); }
                 return;
             }
             PocketGameTerminalSession state = terminalSessions[index];
             if (state == null || terminalRoots[index] == null || !state.IsLocalClaimant() || !state.returnApproved)
             {
-                if (state != null) state.CancelReturn();
+                if (state != null) state.ReportReturnCancelled();
                 _pendingReturn = -1;
                 SetStatus("Game is not ready to stow.");
                 return;
@@ -189,6 +189,7 @@ namespace VrcPocketGame
             claimedPlayerIds[index] = -1; claimGenerations[index] = NextGeneration(claimGenerations[index]); Sync();
             state.sessionGeneration=claimGenerations[index]; state.PocketTerminal_OnReleased();
             if (pool != null && terminalRoots[index] != null) pool.Return(terminalRoots[index]);
+            state.ReportReturnSucceeded();
             _pendingReturn = -1; SetStatus("Game stowed.");
         }
 

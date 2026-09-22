@@ -49,6 +49,10 @@ namespace VrcPocketGame.Sample
             return terminalSession != null && terminalSession.CanPlayerOwnTerminal(requestingPlayer, requestedOwner);
         }
         public void PocketTerminal_RequestReturn() { if(!IsLocalClaimant())return; Save(); if(terminalSession!=null) terminalSession.PocketTerminal_ApproveReturn(); }
+        public void PocketTerminal_OnReturnStarted() { if (ownerText != null) ownerText.text = "Saving and stowing…"; }
+        public void PocketTerminal_OnReturnSucceeded() { Refresh(); }
+        public void PocketTerminal_OnReturnFailed() { if (ownerText != null) ownerText.text = "Could not stow; try again"; }
+        public void PocketTerminal_OnReturnCancelled() { Refresh(); }
         private bool IsLocalClaimant() { return terminalSession != null && terminalSession.IsLocalClaimant() && terminalSession.IsCurrentSession(); }
         private void Load()
         {

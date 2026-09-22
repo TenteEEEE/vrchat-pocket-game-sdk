@@ -23,6 +23,7 @@ namespace VrcPocketGame
         private int _acceptedGeneration = -1;
         private int _acceptedPlayerId = -1;
         private bool _returnPending;
+        private bool _returnResultPending;
         private bool _reconcileScheduled;
 
         public bool HasAcceptedSession()
@@ -65,6 +66,7 @@ namespace VrcPocketGame
             _acceptedGeneration = sessionGeneration;
             _acceptedPlayerId = assignedPlayerId;
             returnApproved = false;
+            _returnResultPending = false;
             _returnPending = false;
             if (ui != null) ui.ResetForSession();
             SetAudience();
@@ -86,6 +88,7 @@ namespace VrcPocketGame
         public override void OnDeserialization() { SetAudience(); Send("PocketTerminal_OnAudienceChanged"); }
         private void OnEnable()
         {
+            _returnResultPending = false;
             _returnPending = false;
             returnApproved = false;
             if (ui != null) ui.ResetForSession();
@@ -102,11 +105,16 @@ namespace VrcPocketGame
             if(returnApproved && terminalPool!=null)
             {
                 _returnPending = true;
+                _returnResultPending = true;
+                Send("PocketTerminal_OnReturnStarted");
                 terminalPool.RequestReturn(slotIndex);
             }
         }
         public void PocketTerminal_ApproveReturn() { if(IsLocalClaimant()) returnApproved=true; }
         public void CancelReturn() { _returnPending = false; returnApproved = false; }
+        public void ReportReturnSucceeded() { if(!_returnResultPending) return; _returnResultPending=false; Send("PocketTerminal_OnReturnSucceeded"); }
+        public void ReportReturnFailed() { if(!_returnResultPending) return; _returnResultPending=false; CancelReturn(); Send("PocketTerminal_OnReturnFailed"); }
+        public void ReportReturnCancelled() { if(!_returnResultPending) return; _returnResultPending=false; CancelReturn(); Send("PocketTerminal_OnReturnCancelled"); }
         public override bool OnOwnershipRequest(VRCPlayerApi requestingPlayer, VRCPlayerApi requestedOwner)
         {
             return CanPlayerOwnTerminal(requestingPlayer, requestedOwner);
