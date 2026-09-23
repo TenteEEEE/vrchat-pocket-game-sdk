@@ -6,6 +6,8 @@ To exercise the validator's aggregate failures in a disposable Unity project, co
 
 The serialized `SyncMethod` is not compared with the class attribute: UdonSharp rewrites it on scene open, play and build, so a freshly installed scene legitimately differs.
 
+Validated on 2026-09-23 (0.5.0) in the same disposable Unity 2022.3.22f1 / Worlds 3.10.5 project: `InstallAndValidateBatch` passed with no warnings on the English defaults, `PocketGameValidatorFaultDriver.RunBatch` passed, and the ClientSim smoke passed. Two games (PocketOverdrive and PocketConveni) installed into one scene with Japanese `statusMessages` passed the scene validator, and the overrides were serialized to both pools.
+
 Validated on 2026-09-23 (0.3.2) in a disposable Unity 2022.3.22f1 / Worlds 3.10.5 project: `InstallAndValidateBatch` from an empty generated folder passed with no warnings (the sample's `screenSize` overload now runs through the default profile), `PocketGameValidatorFaultDriver.RunBatch` passed all three fault cases, the ClientSim smoke passed, and a throwaway profile check confirmed that the legacy overload and a null profile reproduce the 0.3.1 dimensions and component defaults, that invalid profiles and `ResizeCanvas` misuse throw, and that a two-terminal scene built with a non-default profile plus a `CreateExternalCanvas` drawer resized by `ResizeCanvas` passed the scene validator with no warnings.
 
 Validated on 2026-09-23 (0.3.1) in a disposable Unity 2022.3.22f1 / Worlds 3.10.5 project: `InstallAndValidateBatch` from an empty generated folder passed with no warnings, `PocketGameValidatorFaultDriver.RunBatch` passed all three fault cases, and a separate game (PocketConveni) installed into an empty scene passed with no warnings.

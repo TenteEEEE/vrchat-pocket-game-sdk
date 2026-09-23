@@ -11,12 +11,27 @@ namespace VrcPocketGame
     [UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
     public class PocketGameTerminalPool : UdonSharpBehaviour
     {
+        public const int StatusLoading = 0;
+        public const int StatusIdle = 1;
+        public const int StatusBusy = 2;
+        public const int StatusFull = 3;
+        public const int StatusGameReady = 4;
+        public const int StatusPrepareFailed = 5;
+        public const int StatusStowFailed = 6;
+        public const int StatusNotReadyToStow = 7;
+        public const int StatusStowed = 8;
+        public const int StatusRecalled = 9;
+        public const int StatusMessageCount = 10;
+
         public VRCObjectPool pool;
         public GameObject[] terminalRoots;
         public PocketGameTerminalSession[] terminalSessions;
         [UdonSynced] public int[] claimedPlayerIds;
         [UdonSynced] public int[] claimGenerations;
         public TMPro.TMP_Text statusText;
+        /// <summary>Optional localized text by status id. Assign at runtime on language changes, then call RefreshStatus().</summary>
+        [Tooltip("Optional status text overrides by PocketGameTerminalPool status id. A localizer may assign this at runtime and call RefreshStatus().")]
+        public string[] statusMessages;
         public float spawnDistance = 0.45f;
 
         private bool _playerDataRestored;
@@ -30,18 +45,19 @@ namespace VrcPocketGame
         private int _verifyAttempts;
         private int _verifyGeneration;
         private bool _verifyConfirmed;
+        private int _statusId = -1;
         private const int MaxRetries = 8;
 
         private void Start()
         {
             EnsureTables();
-            SetStatus("Loading player data…");
+            SetStatus(StatusLoading);
             SendCustomEventDelayedSeconds(nameof(OwnerMaintenance), 5f);
         }
 
         public override void OnPlayerRestored(VRCPlayerApi player)
         {
-            if (player != null && player.isLocal) { _playerDataRestored = true; SetStatus("Use: call or recall your game"); }
+            if (player != null && player.isLocal) { _playerDataRestored = true; SetStatus(StatusIdle); }
         }
 
         public bool IsLocalPlayerDataRestored() { return _playerDataRestored; }
@@ -54,7 +70,7 @@ namespace VrcPocketGame
 
         public override void Interact()
         {
-            if (!_playerDataRestored) { SetStatus("Loading player data…"); return; }
+            if (!_playerDataRestored) { SetStatus(StatusLoading); return; }
             VRCPlayerApi local = Networking.LocalPlayer;
             if (local == null) return;
             int existing = FindClaim(local.playerId);
@@ -73,7 +89,7 @@ namespace VrcPocketGame
             if (!Networking.IsOwner(gameObject))
             {
                 if (_claimAttempts++ < MaxRetries) { Networking.SetOwner(local, gameObject); SendCustomEventDelayedSeconds(nameof(AttemptClaim), RetryDelay()); }
-                else { _pendingClaim = false; SetStatus("Terminal is busy; try again."); }
+                else { _pendingClaim = false; SetStatus(StatusBusy); }
                 return;
             }
             EnsureTables();
@@ -82,7 +98,7 @@ namespace VrcPocketGame
             if (existing >= 0) { _pendingClaim = false; Recall(existing); BeginVerify(existing); return; }
             GameObject root = pool == null ? null : pool.TryToSpawn();
             int index = FindRoot(root);
-            if (root == null || !IsSlot(index) || terminalSessions[index] == null) { if (root != null) pool.Return(root); _pendingClaim = false; SetStatus("All terminals are in use."); return; }
+            if (root == null || !IsSlot(index) || terminalSessions[index] == null) { if (root != null) pool.Return(root); _pendingClaim = false; SetStatus(StatusFull); return; }
             claimedPlayerIds[index] = local.playerId;
             claimGenerations[index] = NextGeneration(claimGenerations[index]);
             Sync();
@@ -91,7 +107,7 @@ namespace VrcPocketGame
             if (terminalSessions[index].gameEvents != null) Networking.SetOwner(local, terminalSessions[index].gameEvents.gameObject);
             root.transform.SetPositionAndRotation(transform.position - transform.forward * spawnDistance, transform.rotation);
             _pendingClaim = false;
-            SetStatus("Game ready.");
+            SetStatus(StatusGameReady);
             BeginVerify(index);
         }
 
@@ -133,7 +149,7 @@ namespace VrcPocketGame
                         if (pool != null) pool.Return(terminalRoots[index]);
                     }
                     _verifySlot = -1;
-                    SetStatus("Could not prepare terminal; use the kiosk to retry.");
+                    SetStatus(StatusPrepareFailed);
                 }
                 return;
             }
@@ -175,7 +191,7 @@ namespace VrcPocketGame
             if (!Networking.IsOwner(gameObject))
             {
                 if (_claimAttempts++ < MaxRetries) { Networking.SetOwner(local, gameObject); SendCustomEventDelayedSeconds(nameof(AttemptReturn), RetryDelay()); }
-                else { terminalSessions[index].ReportReturnFailed(); _pendingReturn = -1; SetStatus("Could not stow terminal; try again."); }
+                else { terminalSessions[index].ReportReturnFailed(); _pendingReturn = -1; SetStatus(StatusStowFailed); }
                 return;
             }
             PocketGameTerminalSession state = terminalSessions[index];
@@ -183,14 +199,14 @@ namespace VrcPocketGame
             {
                 if (state != null) state.ReportReturnCancelled();
                 _pendingReturn = -1;
-                SetStatus("Game is not ready to stow.");
+                SetStatus(StatusNotReadyToStow);
                 return;
             }
             claimedPlayerIds[index] = -1; claimGenerations[index] = NextGeneration(claimGenerations[index]); Sync();
             state.sessionGeneration=claimGenerations[index]; state.PocketTerminal_OnReleased();
             if (pool != null && terminalRoots[index] != null) pool.Return(terminalRoots[index]);
             state.ReportReturnSucceeded();
-            _pendingReturn = -1; SetStatus("Game stowed.");
+            _pendingReturn = -1; SetStatus(StatusStowed);
         }
 
         public void RestoreTerminalOwnership(int index)
@@ -219,7 +235,7 @@ namespace VrcPocketGame
             terminalRoots[index].transform.SetPositionAndRotation(head.position + forward * .7f - Vector3.up * .18f, Quaternion.LookRotation(forward, Vector3.up));
             VRCObjectSync objectSync = terminalRoots[index].GetComponent<VRCObjectSync>();
             if (objectSync != null) objectSync.FlagDiscontinuity();
-            terminalSessions[index].sessionGeneration=claimGenerations[index]; terminalSessions[index].PocketTerminal_OnRecalled(); SetStatus("Game recalled.");
+            terminalSessions[index].sessionGeneration=claimGenerations[index]; terminalSessions[index].PocketTerminal_OnRecalled(); SetStatus(StatusRecalled);
         }
         public override void OnPostSerialization(SerializationResult result) { if (!result.success) { _resend = true; SendCustomEventDelayedSeconds(nameof(RetrySync), .35f); } else _resend = false; }
         public void RetrySync() { if (_resend && Networking.IsOwner(gameObject)) RequestSerialization(); }
@@ -231,7 +247,27 @@ namespace VrcPocketGame
         private int NextGeneration(int current) { return current == int.MaxValue ? 1 : current + 1; }
         private float RetryDelay() { return .15f + _claimAttempts * .1f; }
         private void Sync() { if (Networking.IsOwner(gameObject)) { _resend = true; RequestSerialization(); } }
-        private void SetStatus(string value) { if (statusText != null) statusText.text = value; }
+        private void SetStatus(int id) { _statusId = id; if (statusText != null) statusText.text = MessageFor(id); }
+        /// <summary>Re-renders the current status after a localizer changes statusMessages at runtime.</summary>
+        public void RefreshStatus() { if (_statusId >= 0 && statusText != null) statusText.text = MessageFor(_statusId); }
+        private string MessageFor(int id)
+        {
+            if (statusMessages != null && id >= 0 && id < statusMessages.Length && !string.IsNullOrEmpty(statusMessages[id])) return statusMessages[id];
+            switch (id)
+            {
+                case StatusLoading: return "Loading player data\u2026";
+                case StatusIdle: return "Use: call or recall your game";
+                case StatusBusy: return "Terminal is busy; try again.";
+                case StatusFull: return "All terminals are in use.";
+                case StatusGameReady: return "Game ready.";
+                case StatusPrepareFailed: return "Could not prepare terminal; use the kiosk to retry.";
+                case StatusStowFailed: return "Could not stow terminal; try again.";
+                case StatusNotReadyToStow: return "Game is not ready to stow.";
+                case StatusStowed: return "Game stowed.";
+                case StatusRecalled: return "Game recalled.";
+                default: return string.Empty;
+            }
+        }
         public override void OnPlayerLeft(VRCPlayerApi player)
         {
             if (player == null) return;

@@ -39,6 +39,8 @@ namespace VrcPocketGame.Editor
         {
             Require(pool.pool != null && pool.pool.gameObject == pool.gameObject, "Pool behaviour and VRCObjectPool must share an owner object.");
             Require(pool.terminalRoots != null && pool.terminalRoots.Length > 0, "Pool must contain terminals.");
+            Require(pool.statusMessages == null || pool.statusMessages.Length == 0 || pool.statusMessages.Length == PocketGameTerminalPool.StatusMessageCount,
+                "Status message overrides must contain exactly " + PocketGameTerminalPool.StatusMessageCount + " entries when configured.");
             var count = pool.terminalRoots.Length;
             Require(pool.terminalSessions != null && pool.terminalSessions.Length == count, "Session count differs from terminal count.");
             Require(pool.claimedPlayerIds != null && pool.claimedPlayerIds.Length == count && pool.claimGenerations != null && pool.claimGenerations.Length == count, "Claim tables have invalid lengths.");

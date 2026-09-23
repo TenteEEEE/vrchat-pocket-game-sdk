@@ -64,6 +64,24 @@ namespace VrcPocketGame.Editor
     {
         public const string GeneratedRoot = "Assets/VrcPocketGameGenerated";
 
+        /// <summary>Returns a fresh array of the built-in English kiosk status messages in status id order.</summary>
+        public static string[] DefaultStatusMessages()
+        {
+            return new[]
+            {
+                "Loading player data\u2026",
+                "Use: call or recall your game",
+                "Terminal is busy; try again.",
+                "All terminals are in use.",
+                "Game ready.",
+                "Could not prepare terminal; use the kiosk to retry.",
+                "Could not stow terminal; try again.",
+                "Game is not ready to stow.",
+                "Game stowed.",
+                "Game recalled."
+            };
+        }
+
         public static void PreparePrograms(params Type[] gameTypes)
         {
             // Asset imports reset UdonSharp's assembly cache. Let an automatic compile

@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.5.0] - 2026-09-23
+
+### Added
+
+- Configurable kiosk status message ids and `statusMessages` overrides, with `RefreshStatus()` for runtime localization.
+- `PocketGameTerminalBuilder.DefaultStatusMessages()` for copying the English defaults.
+- Scene validation for configured status message array length.
+
 ## [0.4.0] - 2026-09-23
 
 ### Added

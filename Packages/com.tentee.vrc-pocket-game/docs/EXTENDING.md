@@ -29,6 +29,20 @@ Every normal gameplay button and pickup action must use `CanUseGameInput()` (or 
 
 Copy the counter sample installer as a reference, then replace the game class and content. In your editor assembly, prepare Udon programs before creating components:
 
+### Kiosk status text
+
+Copy the English defaults and replace any messages you want to customize:
+
+```csharp
+// Run from your installer.
+var messages = PocketGameTerminalBuilder.DefaultStatusMessages();
+messages[PocketGameTerminalPool.StatusIdle] = "Use the kiosk to start or recall your game";
+messages[PocketGameTerminalPool.StatusGameReady] = "Your game is ready.";
+pool.statusMessages = messages;
+```
+
+At runtime, a localizer can assign a translated array after a language change and call `pool.RefreshStatus()` to update the currently displayed message.
+
 ```csharp
 PocketGameTerminalBuilder.PreparePrograms(typeof(MyGame));
 var parts = PocketGameTerminalBuilder.Create(parent, "My terminal", pool, slot, theme,
