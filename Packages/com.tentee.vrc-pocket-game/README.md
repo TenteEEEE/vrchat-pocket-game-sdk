@@ -31,7 +31,7 @@ The pool alone writes `(slot, claimantPlayerId, generation)`. A terminal accepts
 
 An overlay drawer lives above the main game screen. An external drawer is a separate world-space panel. Modal and confirmation UI take priority and block game input; UI does not pause game simulation.
 
-The repository runs `python -X utf8 Tools/verify-package.py` before publishing. Unity batch entry points are `VrcPocketGame.Editor.PocketGameInstaller.PrepareProgramAssetsBatch`, `ValidateCurrentScene`, and `InstallAndValidateBatch`.
+The scene validator checks program assets, ownership, sync mode, modal wiring, and the existing structural/UI layout rules. It collects program-asset and ownership problems in one message. The repository runs `python -X utf8 Tools/verify-package.py` before publishing. Unity batch entry points are `VrcPocketGame.Editor.PocketGameInstaller.PrepareProgramAssetsBatch`, `ValidateCurrentScene`, and `InstallAndValidateBatch`. Copy `Tests~/Validation/PocketGameValidatorFaultDriver.cs` into a validation project's `Assets` and run `PocketGameValidatorFaultDriver.RunBatch` to exercise validator failures.
 
 For ClientSim, copy `Tests~/ClientSim/PocketGameSmokeDriver.cs` into the validation project's `Assets` folder, set Player **Input Handling** to **Both**, and use a normal VCC Worlds project with its VRChat SDK scripting defines (including `UDON`, `VRC_SDK_VRCSDK3`, `UDONSHARP`, and `VRC_ENABLE_PLAYER_PERSISTENCE`). Run `VrcPocketGame.Editor.PocketGameClientSimSmoke.RunBatch` without `-quit`.
 

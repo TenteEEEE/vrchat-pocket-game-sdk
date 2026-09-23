@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.3.1] - 2026-09-23
+
+### Added
+
+- Program-asset, ownership, sync-mode, and modal checks in scene validation, plus a fault driver for aggregated validator failures.
+
+### Changed
+
+- Scene validation is stricter and collects all program-asset problems into one message before running the existing structural checks.
+
 ## [0.3.0] - 2026-09-22
 
 ### Added

@@ -23,12 +23,19 @@ namespace VrcPocketGame.Editor
         public static void ValidateAll()
         {
             var pools = UnityEngine.Object.FindObjectsOfType<PocketGameTerminalPool>(true);
+            var warningCount = PocketGameProgramAssetValidator.Validate(pools);
             Require(pools.Length > 0, "No terminal pool in the scene.");
-            foreach (var pool in pools) Validate(pool);
-            Debug.Log("[Pocket Game SDK] Structural validation PASS: " + pools.Length + " pool(s).");
+            foreach (var pool in pools) ValidateStructure(pool);
+            Debug.Log("[Pocket Game SDK] Structural validation PASS: " + pools.Length + " pool(s), " + warningCount + " warning(s).");
         }
 
         public static void Validate(PocketGameTerminalPool pool)
+        {
+            PocketGameProgramAssetValidator.Validate(new[] { pool });
+            ValidateStructure(pool);
+        }
+
+        private static void ValidateStructure(PocketGameTerminalPool pool)
         {
             Require(pool.pool != null && pool.pool.gameObject == pool.gameObject, "Pool behaviour and VRCObjectPool must share an owner object.");
             Require(pool.terminalRoots != null && pool.terminalRoots.Length > 0, "Pool must contain terminals.");

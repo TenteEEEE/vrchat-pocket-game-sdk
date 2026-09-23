@@ -19,6 +19,8 @@ VRChat ワールド向けの個人ゲーム端末 SDK です。Core はプール
 
 pool だけが `(slot, claimantPlayerId, generation)` を書き込みます。端末 root、SDK session、game behavior は一緒に所有権を移します。overlay drawer は画面上、external drawer は別の world-space panel です。modal/confirm は入力を最優先で遮断し、ゲームを pause しません。
 
+Scene validator は既存の配線チェックの前に、SDK 階層の Program Asset（欠損・削除済み参照・重複・未コンパイル・`Assets/VrcPocketGameGenerated` 外の配置）、同期モード、所有権対象の分離、`confirmPanel` / `inputModal` の設定を検査し、エラーを 1 つのメッセージにまとめて報告します。検査自体の確認は `Tests~/Validation/PocketGameValidatorFaultDriver.cs` を検証プロジェクトの `Assets` にコピーし、`PocketGameValidatorFaultDriver.RunBatch` を実行します。
+
 `python Tools/verify-package.py` を実行してください。ClientSim は `Tests~/ClientSim/PocketGameSmokeDriver.cs` を検証プロジェクトの `Assets` にコピーし、Input Handling を **Both** にします。通常の VCC Worlds project と `UDON`、`VRC_SDK_VRCSDK3`、`UDONSHARP`、`VRC_ENABLE_PLAYER_PERSISTENCE` を含む VRChat SDK scripting define が必要です。`PocketGameClientSimSmoke.RunBatch` は **`-quit` なし**で実行します。
 
 独立した Unity 2022.3.22f1 / Worlds 3.10.5 project で ClientSim smoke test は通過しました。実 Udon の claim、action、retry、drawers、modal、scale、stow、restore、reset と、別 pool terminal を借りた後の保存値復元を確認しています。通常画面、overlay、external drawer の Unity render 目視確認も通過しました。詳細は [検証結果](docs/VALIDATION.md) を参照してください。
