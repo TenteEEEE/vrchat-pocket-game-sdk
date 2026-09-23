@@ -17,6 +17,8 @@ Create a game-specific runtime assembly. Build terminals through `PocketGameTerm
 
 Every game input entry point must call `session.CanUseGameInput()`. It combines local claimant authority, accepted session identity, return state, and modal state.
 
+`PocketGameBehaviour` is the recommended optional base: it exposes `terminalSession` and `ui`, forwards the terminal events to hooks, and supplies `CanUseGameInput()` and `IsLocalClaimant()`. The raw event contract above remains supported. Derived games keep their own `[UdonBehaviourSyncMode]`. UI buttons that call game methods directly bypass the SDK input gate, so each such method must call `CanUseGameInput()`. `session.IsLocalClaimant()` already includes `IsCurrentSession()`. The scene validator now requires at least one behavior on each game object to forward `OnOwnershipRequest` to `session.CanPlayerOwnTerminal` or derive from `PocketGameBehaviour`.
+
 ## Contract and authority
 
 Games implement five required events: `PocketTerminal_OnClaimed`, `PocketTerminal_OnReleased`, `PocketTerminal_OnRecalled`, `PocketTerminal_OnUseDown`, and `PocketTerminal_RequestReturn`. `PocketTerminal_OnAudienceChanged` is optional and is useful for spectator-only presentation.

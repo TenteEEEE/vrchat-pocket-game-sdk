@@ -2,20 +2,30 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using UdonSharp;
+using UdonSharpEditor;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.UI;
 using VRC.Udon.ProgramSources;
 using VRC.Udon;
+using VRC.SDKBase;
 
 namespace VrcPocketGame.Editor
 {
-    internal static class PocketGameProgramAssetValidator
+    public static class PocketGameProgramAssetValidator
     {
         private static readonly Type[] CoreTypes = {
             typeof(PocketGameTerminalPool), typeof(PocketGameTerminalSession),
             typeof(PocketGameInputRelay), typeof(PocketGameUi)
         };
+
+        public static bool DeclaresOwnershipGuard(Type type)
+        {
+            if (type == null) return false;
+            var method = type.GetMethod("OnOwnershipRequest", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public,
+                null, new[] { typeof(VRCPlayerApi), typeof(VRCPlayerApi) }, null);
+            return method != null && method.DeclaringType != typeof(UdonSharpBehaviour);
+        }
 
         private sealed class Findings
         {
@@ -58,6 +68,7 @@ namespace VrcPocketGame.Editor
                         {
                             gameEvents.Add(session.gameEvents);
                             behaviours.Add(session.gameEvents);
+                            foreach (var attached in session.gameEvents.GetComponents<UdonBehaviour>()) behaviours.Add(attached);
                         }
                 }
             }
@@ -233,6 +244,27 @@ namespace VrcPocketGame.Editor
                 CheckUi(pool, i, root, session, behaviours, behaviourTypes, buttons, findings);
                 if (game != null)
                 {
+                    var declaresOwnershipGuard = false;
+                    foreach (var gameBehaviour in gameObject.GetComponents<UdonBehaviour>())
+                    {
+                        Type gameType;
+                        if (!behaviourTypes.TryGetValue(gameBehaviour, out gameType)) continue;
+                        if (DeclaresOwnershipGuard(gameType)) declaresOwnershipGuard = true;
+                    }
+                    // A graph event target has no known C# type; retain its existing warning and skip type checks.
+                    if (behaviourTypes.ContainsKey(game) && !declaresOwnershipGuard)
+                        findings.Error("Slot " + i + " game object " + DescribeObject(gameObject, behaviours, behaviourTypes) + " has no UdonSharp behaviour forwarding OnOwnershipRequest to session.CanPlayerOwnTerminal; derive from PocketGameBehaviour or add the forward.");
+
+                    Type gameEventsType;
+                    if (behaviourTypes.TryGetValue(game, out gameEventsType) && typeof(PocketGameBehaviour).IsAssignableFrom(gameEventsType))
+                    {
+                        var proxy = UdonSharpEditorUtility.GetProxyBehaviour(game) as PocketGameBehaviour;
+                        if (proxy == null || proxy.terminalSession != session)
+                            findings.Error("Slot " + i + " PocketGameBehaviour on game object '" + Path(gameObject.transform) + "' must reference this slot's terminalSession.");
+                        if (proxy != null && proxy.ui != null && proxy.ui != session.ui)
+                            findings.Error("Slot " + i + " PocketGameBehaviour on game object '" + Path(gameObject.transform) + "' has a ui reference that does not match the session UI.");
+                    }
+
                     // UdonSharp cannot reconcile Manual and Continuous behaviours that share one GameObject.
                     var hasManual = false;
                     var hasContinuous = false;

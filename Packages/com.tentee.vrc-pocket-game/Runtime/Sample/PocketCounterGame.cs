@@ -9,13 +9,11 @@ namespace VrcPocketGame.Sample
 {
     /// <summary>Minimal sample: claimant increments a persistent counter; everyone sees its synced value.</summary>
     [UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
-    public class PocketCounterGame : UdonSharpBehaviour
+    public class PocketCounterGame : PocketGameBehaviour
     {
-        public PocketGameTerminalSession terminalSession;
         [UdonSynced] public int sharedCount;
         public TMP_Text countText;
         public TMP_Text ownerText;
-        public PocketGameUi ui;
         [Tooltip("Unique reverse-domain-ish prefix owned by this game. Change it when copying the sample.")]
         public string saveNamespace = "tentee.pocket.counter.v1";
         private int _savedCount;
@@ -24,7 +22,7 @@ namespace VrcPocketGame.Sample
         public override void OnPlayerRestored(VRCPlayerApi player) { if (player != null && player.isLocal) Load(); }
         public void OwnerAddOne()
         {
-            if (terminalSession == null || !terminalSession.CanUseGameInput()) return;
+            if (!CanUseGameInput()) return;
             if (sharedCount < int.MaxValue) sharedCount++;
             Save();
             RequestSerialization();
@@ -39,21 +37,16 @@ namespace VrcPocketGame.Sample
             ui.ClosePanels();
             Refresh();
         }
-        public void PocketTerminal_OnClaimed() { if (ui != null) ui.ResetForSession(); if (IsLocalClaimant()) { Load(); sharedCount = _savedCount; RequestSerialization(); } Refresh(); }
-        public void PocketTerminal_OnUseDown() { OwnerAddOne(); }
-        public void PocketTerminal_OnRecalled() { Refresh(); }
-        public void PocketTerminal_OnReleased() { Refresh(); }
-        public void PocketTerminal_OnAudienceChanged() { Refresh(); }
-        public override bool OnOwnershipRequest(VRCPlayerApi requestingPlayer, VRCPlayerApi requestedOwner)
-        {
-            return terminalSession != null && terminalSession.CanPlayerOwnTerminal(requestingPlayer, requestedOwner);
-        }
-        public void PocketTerminal_RequestReturn() { if(!IsLocalClaimant())return; Save(); if(terminalSession!=null) terminalSession.PocketTerminal_ApproveReturn(); }
-        public void PocketTerminal_OnReturnStarted() { if (ownerText != null) ownerText.text = "Saving and stowing…"; }
-        public void PocketTerminal_OnReturnSucceeded() { Refresh(); }
-        public void PocketTerminal_OnReturnFailed() { if (ownerText != null) ownerText.text = "Could not stow; try again"; }
-        public void PocketTerminal_OnReturnCancelled() { Refresh(); }
-        private bool IsLocalClaimant() { return terminalSession != null && terminalSession.IsLocalClaimant() && terminalSession.IsCurrentSession(); }
+        protected override void OnTerminalClaimed() { if (ui != null) ui.ResetForSession(); if (IsLocalClaimant()) { Load(); sharedCount = _savedCount; RequestSerialization(); } Refresh(); }
+        protected override void OnTerminalUseDown() { OwnerAddOne(); }
+        protected override void OnTerminalRecalled() { Refresh(); }
+        protected override void OnTerminalReleased() { Refresh(); }
+        protected override void OnTerminalAudienceChanged() { Refresh(); }
+        protected override bool OnTerminalReturnRequested() { Save(); return true; }
+        protected override void OnTerminalReturnStarted() { if (ownerText != null) ownerText.text = "Saving and stowing…"; }
+        protected override void OnTerminalReturnSucceeded() { Refresh(); }
+        protected override void OnTerminalReturnFailed() { if (ownerText != null) ownerText.text = "Could not stow; try again"; }
+        protected override void OnTerminalReturnCancelled() { Refresh(); }
         private void Load()
         {
             VRCPlayerApi local = Networking.LocalPlayer;

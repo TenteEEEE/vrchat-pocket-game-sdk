@@ -6,22 +6,24 @@ Register the new runtime assembly in its own `UdonSharpAssemblyDefinition` asset
 
 Your game behavior owns game rules, manually synced spectator state, and PlayerData. Give saves a stable game ID prefix in `saveNamespace`, for example `myname.pocket.mygame.v1`. Do not serialize shell claim state into the game, and do not put a terminal-pool index in PlayerData keys.
 
-Implement these methods on the game behavior:
+`PocketGameBehaviour` is the recommended optional base. It provides the public `terminalSession` and `ui` fields, input and claimant helpers, ownership forwarding, and the event hooks below. Derived games keep their own `[UdonBehaviourSyncMode]`. The raw event contract remains supported for games that do not derive from the base.
+
+Override these hooks when deriving from `PocketGameBehaviour` (otherwise implement the raw event names shown in the first column):
 
 | Event | Game responsibility |
 | --- | --- |
-| `PocketTerminal_OnClaimed` | Load local PlayerData and initialize claimant-owned game state. |
-| `PocketTerminal_OnReleased` | Clear or refresh local presentation. |
-| `PocketTerminal_OnRecalled` | Refresh presentation after the shell moves the terminal. |
-| `PocketTerminal_OnUseDown` | Perform the pickup-use action, after `session.CanUseGameInput()`. |
-| `PocketTerminal_RequestReturn` | Save, then synchronously call `session.PocketTerminal_ApproveReturn()` to allow stow. |
-| `PocketTerminal_OnAudienceChanged` | Optional: refresh owner/spectator presentation. |
-| `PocketTerminal_OnReturnStarted` | Optional: show stowing feedback. |
-| `PocketTerminal_OnReturnSucceeded` | Optional: finish or close the game's UI. |
-| `PocketTerminal_OnReturnFailed` | Optional: restore the UI and allow a retry. |
-| `PocketTerminal_OnReturnCancelled` | Optional: restore the UI. |
+| `PocketTerminal_OnClaimed` -> `OnTerminalClaimed` | Load local PlayerData and initialize claimant-owned game state. |
+| `PocketTerminal_OnReleased` -> `OnTerminalReleased` | Clear or refresh local presentation. |
+| `PocketTerminal_OnRecalled` -> `OnTerminalRecalled` | Refresh presentation after the shell moves the terminal. |
+| `PocketTerminal_OnUseDown` -> `OnTerminalUseDown` | Perform the pickup-use action; the base applies `CanUseGameInput()`. |
+| `PocketTerminal_RequestReturn` -> `OnTerminalReturnRequested` | Save, then return true to synchronously approve stow; return false to refuse. |
+| `PocketTerminal_OnAudienceChanged` -> `OnTerminalAudienceChanged` | Optional: refresh owner/spectator presentation. |
+| `PocketTerminal_OnReturnStarted` -> `OnTerminalReturnStarted` | Optional: show stowing feedback. |
+| `PocketTerminal_OnReturnSucceeded` -> `OnTerminalReturnSucceeded` | Optional: finish or close the game's UI. |
+| `PocketTerminal_OnReturnFailed` -> `OnTerminalReturnFailed` | Optional: restore the UI and allow a retry. |
+| `PocketTerminal_OnReturnCancelled` -> `OnTerminalReturnCancelled` | Optional: restore the UI. |
 
-Every normal gameplay button and pickup action must use `session.CanUseGameInput()`. A modal confirmation handler instead checks `session.IsLocalClaimant()` and its specific modal state, as the sample's `ConfirmReset` does: the ordinary input gate intentionally rejects input while that modal is open. The game checks PlayerData and its own schema; the SDK owns claim/session identity, pickup authority, and terminal lifetime. Return approval stays synchronous inside `PocketTerminal_RequestReturn`; the result events arrive afterwards, so a game must not block on them. Forward the game's `OnOwnershipRequest` to `session.CanPlayerOwnTerminal` as in the sample.
+Every normal gameplay button and pickup action must use `CanUseGameInput()` (or `session.CanUseGameInput()` without the base). UI buttons that call game methods directly are not gated by the SDK; call `CanUseGameInput()` in each such method. A modal confirmation handler instead checks `IsLocalClaimant()` and its specific modal state, as the sample's `ConfirmReset` does: the ordinary input gate intentionally rejects input while that modal is open. `session.IsLocalClaimant()` already includes `IsCurrentSession()`. The game checks PlayerData and its own schema; the SDK owns claim/session identity, pickup authority, and terminal lifetime. Return approval stays synchronous inside `PocketTerminal_RequestReturn`; the result events arrive afterwards, so a game must not block on them. The scene validator requires the ownership forward to `session.CanPlayerOwnTerminal`; deriving from `PocketGameBehaviour` supplies it.
 
 ## Installer outline
 
