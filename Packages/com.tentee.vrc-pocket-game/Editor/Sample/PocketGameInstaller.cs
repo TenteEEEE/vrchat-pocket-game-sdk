@@ -46,7 +46,7 @@ namespace VrcPocketGame.Editor
             var backing = UdonSharpEditorUtility.GetBackingUdonBehaviour(pool);
             backing.interactText = "Call / recall your game";
             backing.proximity = 2;
-            var kioskCanvas = PocketGameUiBuilder.Canvas(kiosk.transform, "Kiosk screen", new Vector2(660, 280), new Vector3(0, 0, -.035f));
+            var kioskCanvas = PocketGameUiBuilder.Canvas(kiosk.transform, "Kiosk screen", new Vector2(660, 280), new Vector3(0, 0, -.035f), .001f, PocketGameUi.WorldUiSortingOrder);
             // The kiosk uses Interact, not uGUI input; its solid collider stays reachable.
             UnityEngine.Object.DestroyImmediate(kioskCanvas.GetComponent<VRCUiShape>());
             UnityEngine.Object.DestroyImmediate(kioskCanvas.GetComponent<BoxCollider>());
@@ -103,7 +103,7 @@ namespace VrcPocketGame.Editor
             PocketGameUiBuilder.Button(parts.ActionSlot, "+1", new Vector2(225, 52), new Vector2(0, 24), gameEvents, "OwnerAddOne", theme, true);
             PocketGameUiBuilder.Button(parts.ActionSlot, "Side drawer", new Vector2(225, 52), new Vector2(258, 24), uiEvents, "ToggleExternalDrawer", theme);
             PocketGameUiBuilder.Text(parts.ActionSlot, "Grip hint", "Grab below the screen  /  Your progress follows you", new Vector2(730, 30), new Vector2(0, -29), 16, theme, true, TextAlignmentOptions.Center);
-            var gripCanvas = PocketGameUiBuilder.Canvas(parts.Root.transform, "Grip label", new Vector2(240, 26), new Vector3(0, -.30f, -.022f));
+            var gripCanvas = PocketGameUiBuilder.Canvas(parts.Root.transform, "Grip label", new Vector2(240, 26), new Vector3(0, -.30f, -.022f), .001f, PocketGameUi.TerminalUiSortingOrder);
             UnityEngine.Object.DestroyImmediate(gripCanvas.GetComponent<VRCUiShape>());
             UnityEngine.Object.DestroyImmediate(gripCanvas.GetComponent<BoxCollider>());
             PocketGameUiBuilder.Panel(gripCanvas.transform, "Grip", new Vector2(240, 18), Vector2.zero, theme.Accent);
