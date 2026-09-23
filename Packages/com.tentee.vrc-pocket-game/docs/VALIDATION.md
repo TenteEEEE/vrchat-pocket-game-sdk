@@ -6,7 +6,7 @@ To exercise the validator's aggregate failures in a disposable Unity project, co
 
 The serialized `SyncMethod` is not compared with the class attribute: UdonSharp rewrites it on scene open, play and build, so a freshly installed scene legitimately differs.
 
-Validated on 2026-09-23 (0.4.0) in a disposable Unity 2022.3.22f1 / Worlds 3.10.5 project: `InstallAndValidateBatch` from an empty generated folder passed with no warnings, `PocketGameValidatorFaultDriver.RunBatch` passed all three fault cases, and a separate game (PocketConveni) installed into an empty scene passed with no warnings.
+Validated on 2026-09-23 (0.3.1) in a disposable Unity 2022.3.22f1 / Worlds 3.10.5 project: `InstallAndValidateBatch` from an empty generated folder passed with no warnings, `PocketGameValidatorFaultDriver.RunBatch` passed all three fault cases, and a separate game (PocketConveni) installed into an empty scene passed with no warnings.
 
 Validated on 2026-09-21 in a disposable project, separate from the source games.
 
