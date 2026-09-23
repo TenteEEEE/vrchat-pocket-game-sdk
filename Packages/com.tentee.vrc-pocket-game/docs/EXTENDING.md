@@ -64,6 +64,18 @@ var leftDrawer = PocketGameTerminalBuilder.CreateExternalCanvas(parts, "Left dra
     new Vector2(320, 520), new Vector3(-.39f, 0, -.025f));
 ```
 
-When a canvas must change size after creation, use `PocketGameUiBuilder.ResizeCanvas` instead of editing a canvas `RectTransform` directly, so its interactive collider stays in sync. Additional drawers are game-owned for visibility; the SDK toggles only `parts.ExternalCanvas`.
+When a canvas must change size after creation, use `PocketGameUiBuilder.ResizeCanvas` instead of editing a canvas `RectTransform` directly, so its interactive collider stays in sync. Additional drawers are game-owned for visibility; assign them to `ui.extraDrawers` to let SDK modals close them. `closeExtraDrawersOnModal` controls that behavior. Use `ToggleExtraDrawer(index)` / `SetExtraDrawerActive(index, active)` to manage them through the UI API.
+
+## UI panels, help, and scale
+
+Use `CloseHelp` / `CloseSettings`, `ToggleHelp` / `ToggleSettings`, and `IsHelpOpen` / `IsSettingsOpen` to control and query those panels without closing unrelated panels. Help pages can be selected with `ShowHelpPage(index)` and queried using `GetHelpPage()`. Page-change notifications are opt-in: assign `helpPageEvents` to a Udon behavior that implements `PocketUi_OnHelpPageChanged`. Without that reference the SDK sends no event. The handler can query the current page with `GetHelpPage()`.
+
+For multiple confirmations, assign `confirmPanels` and call `ShowConfirmAt(index)`, `CloseConfirm(index)`, or `GetOpenConfirm()`; index zero is used by legacy `ShowConfirm()`. If `confirmPanels` is empty, the legacy `confirmPanel` field remains in use. `SetScale(multiplier)` accepts continuous multipliers clamped to 0.5–2.0 relative to the scale captured for the session. The existing preset methods remain available.
+
+## World-space canvas drawing order
+
+`PocketGameUi.WorldUiSortingOrder` is 0 for fixed world signage such as the kiosk. `TerminalUiSortingOrder` is 10 for terminal screens and drawers; `PocketGameTerminalBuilder` applies it to the main and external canvases. `TerminalEffectSortingOrder` is 11 for terminal-attached visual effects that should appear above terminal UI. `PocketGameUiBuilder.Canvas` accepts an optional `sortingOrder`, defaulting to the world order, so game-owned canvases can choose deliberately.
+
+World-space UI ordering follows sorting layer, sorting order, then camera distance. The terminal order keeps a held terminal screen in front of a kiosk face even when the kiosk canvas is closer to the camera. Keep standard transparent materials on the normal transparent queue; a custom queue such as 3100 can draw after other world transparency and cause a canvas to overlap unrelated transparent objects.
 
 Keep only spectator-facing data in the game's synced fields. Call `RequestSerialization` after claimant-owned changes and refresh presentation in `OnDeserialization`. PlayerData is a separate local persistence channel: load after the SDK accepts the restored claimant, version your schema, and save at meaningful game checkpoints. Return approval confirms that the game allows release; it does not acknowledge a cloud write.

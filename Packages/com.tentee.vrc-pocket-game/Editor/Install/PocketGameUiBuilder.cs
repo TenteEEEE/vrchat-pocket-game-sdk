@@ -23,7 +23,7 @@ namespace VrcPocketGame.Editor
 
     public static class PocketGameUiBuilder
     {
-        public static Canvas Canvas(Transform parent, string name, Vector2 size, Vector3 position, float pixelScale = .001f)
+        public static Canvas Canvas(Transform parent, string name, Vector2 size, Vector3 position, float pixelScale = .001f, int sortingOrder = PocketGameUi.WorldUiSortingOrder)
         {
             var root = new GameObject(name, typeof(RectTransform), typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
             root.transform.SetParent(parent, false);
@@ -32,6 +32,7 @@ namespace VrcPocketGame.Editor
             ((RectTransform)root.transform).sizeDelta = size;
             var canvas = root.GetComponent<Canvas>();
             canvas.renderMode = RenderMode.WorldSpace;
+            canvas.sortingOrder = sortingOrder;
             root.AddComponent<VRCUiShape>();
             var collider = root.AddComponent<BoxCollider>();
             collider.isTrigger = true;

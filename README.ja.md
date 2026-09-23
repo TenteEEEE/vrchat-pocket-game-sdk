@@ -31,6 +31,8 @@
 
 ### リリース
 
-1. `package.json` のバージョンと `CHANGELOG.md` を更新してマージします。
-2. `<version>` タグで GitHub Release を公開すると、ワークフローがパッケージを添付します。**Release VPM package** を `main` またはバージョンタグから手動実行することもできます。`dry_run` は公開せずにビルドと検証を行います。
-3. `VPM_REPOS_TOKEN` があれば VPM 一覧の更新を起動できます。ない場合は `TenteEEEE/vpm-repos` の Actions で **Build Repo Listing** を実行します。
+1. `CHANGELOG.md` を更新してマージします。リリース版のバージョンはタグから決まるため、リリースのために `package.json` を編集しません。
+2. `x.x.x` または `vx.x.x` 形式のタグを push します。ワークフローが VPM メタデータにバージョンを書き込み、検証後に GitHub Release とパッケージを公開します。
+3. 過去のバージョンを補完する場合は、バージョンタグから **Release VPM package** を手動実行できます。ブランチからの実行は dry run のみです。
+4. `dry_run` を指定すると、公開せずにビルドと検証を実行します。
+5. `VPM_REPOS_TOKEN` があれば VPM 一覧の更新を起動できます。ない場合は `TenteEEEE/vpm-repos` の Actions で **Build Repo Listing** を実行します。
