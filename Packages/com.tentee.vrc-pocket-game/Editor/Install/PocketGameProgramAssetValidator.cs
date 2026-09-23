@@ -5,7 +5,6 @@ using UdonSharp;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.UI;
-using VRC.SDKBase;
 using VRC.Udon.ProgramSources;
 using VRC.Udon;
 
@@ -170,7 +169,8 @@ namespace VrcPocketGame.Editor
                         findings.Error(ObjectContext(behaviour, type, path) + " references a stale core program asset; expected '" + expected + "'.");
                 }
 
-                CheckSyncMode(behaviour, type, path, gameEvents.Contains(behaviour), findings);
+                if (gameEvents.Contains(behaviour) && DeclaredSyncMode(type) == null)
+                    findings.Warning(ObjectContext(behaviour, type, path) + " gameEvents class has no sync-mode attribute; consider [UdonBehaviourSyncMode(BehaviourSyncMode.Manual)].");
             }
 
             foreach (var pool in validPools)
@@ -184,22 +184,18 @@ namespace VrcPocketGame.Editor
             foreach (var button in root.GetComponentsInChildren<Button>(true)) buttons.Add(button);
         }
 
-        private static void CheckSyncMode(UdonBehaviour behaviour, Type type, string assetPath, bool isGameEvents, Findings findings)
+        // UdonSharp rewrites each behaviour's serialized SyncMethod from its class on scene open, play and build,
+        // so a freshly installed scene legitimately differs; only the declared modes are meaningful here.
+        private static BehaviourSyncMode? DeclaredSyncMode(Type type)
         {
-            var attribute = Attribute.GetCustomAttribute(type, typeof(UdonBehaviourSyncModeAttribute), true) as UdonBehaviourSyncModeAttribute;
-            if (attribute == null)
-            {
-                if (isGameEvents)
-                    findings.Warning(ObjectContext(behaviour, type, assetPath) + " gameEvents class has no sync-mode attribute; consider [UdonBehaviourSyncMode(BehaviourSyncMode.Manual)].");
-                return;
-            }
-            // UdonSharp adapts NoVariableSync behaviours to their GameObject's sync mode, so only fixed modes are compared.
-            if (attribute.behaviourSyncMode == BehaviourSyncMode.Any || attribute.behaviourSyncMode == BehaviourSyncMode.NoVariableSync) return;
-            var expected = attribute.behaviourSyncMode == BehaviourSyncMode.None
-                ? Networking.SyncType.None
-                : attribute.behaviourSyncMode == BehaviourSyncMode.Continuous ? Networking.SyncType.Continuous : Networking.SyncType.Manual;
-            if (behaviour.SyncMethod != expected)
-                findings.Error(ObjectContext(behaviour, type, assetPath) + " has sync mode " + behaviour.SyncMethod + " but its class requires " + expected + "; re-run the installer/CopyToUdon.");
+            var attribute = type == null ? null : Attribute.GetCustomAttribute(type, typeof(UdonBehaviourSyncModeAttribute), true) as UdonBehaviourSyncModeAttribute;
+            return attribute == null ? (BehaviourSyncMode?)null : attribute.behaviourSyncMode;
+        }
+
+        private static Type ProgramType(UdonBehaviour behaviour)
+        {
+            var program = behaviour.programSource as UdonSharpProgramAsset;
+            return program == null || program.sourceCsScript == null ? null : program.sourceCsScript.GetClass();
         }
 
         private static void CheckOwnershipAndUi(PocketGameTerminalPool pool, HashSet<UdonBehaviour> behaviours,
@@ -237,9 +233,17 @@ namespace VrcPocketGame.Editor
                 CheckUi(pool, i, root, session, behaviours, behaviourTypes, buttons, findings);
                 if (game != null)
                 {
+                    // UdonSharp cannot reconcile Manual and Continuous behaviours that share one GameObject.
+                    var hasManual = false;
+                    var hasContinuous = false;
                     foreach (var other in gameObject.GetComponents<UdonBehaviour>())
-                        if (other != game && other.SyncMethod != Networking.SyncType.None && game.SyncMethod != Networking.SyncType.None && other.SyncMethod != game.SyncMethod)
-                            findings.Error(ObjectContext(game, behaviourTypes.ContainsKey(game) ? behaviourTypes[game] : null, AssetPath(game)) + " shares its GameObject with a behaviour using a different non-None sync mode.");
+                    {
+                        var mode = DeclaredSyncMode(ProgramType(other));
+                        hasManual |= mode == BehaviourSyncMode.Manual;
+                        hasContinuous |= mode == BehaviourSyncMode.Continuous;
+                    }
+                    if (hasManual && hasContinuous)
+                        findings.Error(ObjectContext(game, behaviourTypes.ContainsKey(game) ? behaviourTypes[game] : null, AssetPath(game)) + " shares its GameObject with behaviours declaring both Manual and Continuous sync.");
                 }
             }
         }

@@ -67,7 +67,11 @@ public static class PocketGameValidatorFaultDriver
     private static string CaptureValidationFailure()
     {
         try { PocketGameSceneValidator.ValidateAll(); }
-        catch (InvalidOperationException exception) { return exception.Message; }
+        catch (InvalidOperationException exception)
+        {
+            Debug.Log("PocketGameValidatorFaultDriver expected failure:\n" + exception.Message);
+            return exception.Message;
+        }
         throw new InvalidOperationException("Expected scene validation to fail.");
     }
 
