@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.3.0] - 2026-09-22
+
+### Added
+
+- Optional return-lifecycle game events: `PocketTerminal_OnReturnStarted`, `PocketTerminal_OnReturnSucceeded`, `PocketTerminal_OnReturnFailed`, and `PocketTerminal_OnReturnCancelled`. Started fires when the SDK accepts an approved return; Succeeded fires only after the claim is cleared and the terminal is back in the pool; Failed fires when ownership retries are exhausted; Cancelled fires for a stale or no-longer-valid request.
+- `PocketGameTerminalSession` methods `ReportReturnSucceeded()`, `ReportReturnFailed()`, and `ReportReturnCancelled()` for the pool, each delivering at most one result per request. Failed and Cancelled reset the return state so the game can ask again. Games that do not implement the events are unaffected.
+
+### Fixed
+
+- First-run installation no longer fails with "outdated script version": newly generated UdonSharp program assets are stamped with the current script version right after import.
+- `CopyToUdon` now reports which behaviour, GameObject, and program asset are not ready, with a distinct message when no program asset is assigned.
+
 ## [0.2.0] - 2026-09-21
 
 ### Added

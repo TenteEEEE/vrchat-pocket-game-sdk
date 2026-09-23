@@ -16,8 +16,12 @@ Implement these methods on the game behavior:
 | `PocketTerminal_OnUseDown` | Perform the pickup-use action, after `session.CanUseGameInput()`. |
 | `PocketTerminal_RequestReturn` | Save, then synchronously call `session.PocketTerminal_ApproveReturn()` to allow stow. |
 | `PocketTerminal_OnAudienceChanged` | Optional: refresh owner/spectator presentation. |
+| `PocketTerminal_OnReturnStarted` | Optional: show stowing feedback. |
+| `PocketTerminal_OnReturnSucceeded` | Optional: finish or close the game's UI. |
+| `PocketTerminal_OnReturnFailed` | Optional: restore the UI and allow a retry. |
+| `PocketTerminal_OnReturnCancelled` | Optional: restore the UI. |
 
-Every normal gameplay button and pickup action must use `session.CanUseGameInput()`. A modal confirmation handler instead checks `session.IsLocalClaimant()` and its specific modal state, as the sample's `ConfirmReset` does: the ordinary input gate intentionally rejects input while that modal is open. The game checks PlayerData and its own schema; the SDK owns claim/session identity, pickup authority, and terminal lifetime. Forward the game's `OnOwnershipRequest` to `session.CanPlayerOwnTerminal` as in the sample.
+Every normal gameplay button and pickup action must use `session.CanUseGameInput()`. A modal confirmation handler instead checks `session.IsLocalClaimant()` and its specific modal state, as the sample's `ConfirmReset` does: the ordinary input gate intentionally rejects input while that modal is open. The game checks PlayerData and its own schema; the SDK owns claim/session identity, pickup authority, and terminal lifetime. Return approval stays synchronous inside `PocketTerminal_RequestReturn`; the result events arrive afterwards, so a game must not block on them. Forward the game's `OnOwnershipRequest` to `session.CanPlayerOwnTerminal` as in the sample.
 
 ## Installer outline
 

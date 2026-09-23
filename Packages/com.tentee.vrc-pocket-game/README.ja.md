@@ -15,7 +15,7 @@ VRChat ワールド向けの個人ゲーム端末 SDK です。Core はプール
 
 ゲーム専用 runtime assembly を作り、`PocketGameTerminalBuilder.Create` と `PocketGameUiBuilder` を使います。session の `gameEvents`、`ui`、`pickup` を設定します。同期データと PlayerData schema はゲーム側の責務です。`author.game.v1` のような安定した `gameId` namespace を使い、借用した pool slot をキーに含めません。手順全体は [Extending the SDK](docs/EXTENDING.md) を参照してください。すべてのゲーム入力で `session.CanUseGameInput()` を確認します。
 
-必須イベントは `PocketTerminal_OnClaimed`、`PocketTerminal_OnReleased`、`PocketTerminal_OnRecalled`、`PocketTerminal_OnUseDown`、`PocketTerminal_RequestReturn` の 5 個です。`PocketTerminal_OnAudienceChanged` は観戦表示用の任意イベントです。返却は同期的で、`PocketTerminal_RequestReturn` 中に保存して `session.PocketTerminal_ApproveReturn()` を呼ぶと許可され、呼ばなければ端末は残ります。
+必須イベントは `PocketTerminal_OnClaimed`、`PocketTerminal_OnReleased`、`PocketTerminal_OnRecalled`、`PocketTerminal_OnUseDown`、`PocketTerminal_RequestReturn` の 5 個です。`PocketTerminal_OnAudienceChanged` は観戦表示用の任意イベントです。返却には 4 個の任意イベントがあります。`PocketTerminal_OnReturnStarted` は SDK が許可済みの返却を受け付けたとき、`PocketTerminal_OnReturnSucceeded` は要求が解決され端末がプールに戻った後だけ、`PocketTerminal_OnReturnFailed` は所有権の再試行が尽きたとき、`PocketTerminal_OnReturnCancelled` は要求が無効になったときに発生します。失敗と取り消しでは返却状態がリセットされ、端末はそのまま使えるため、プレイヤーは再試行できます。返却は同期的で、`PocketTerminal_RequestReturn` 中に保存して `session.PocketTerminal_ApproveReturn()` を呼ぶと許可され、呼ばなければ端末は残ります。
 
 pool だけが `(slot, claimantPlayerId, generation)` を書き込みます。端末 root、SDK session、game behavior は一緒に所有権を移します。overlay drawer は画面上、external drawer は別の world-space panel です。modal/confirm は入力を最優先で遮断し、ゲームを pause しません。
 

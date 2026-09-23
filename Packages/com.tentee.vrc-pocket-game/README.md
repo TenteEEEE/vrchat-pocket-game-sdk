@@ -21,6 +21,8 @@ Every game input entry point must call `session.CanUseGameInput()`. It combines 
 
 Games implement five required events: `PocketTerminal_OnClaimed`, `PocketTerminal_OnReleased`, `PocketTerminal_OnRecalled`, `PocketTerminal_OnUseDown`, and `PocketTerminal_RequestReturn`. `PocketTerminal_OnAudienceChanged` is optional and is useful for spectator-only presentation.
 
+Four optional return-lifecycle events are also available: `PocketTerminal_OnReturnStarted` when the SDK accepts an approved return, `PocketTerminal_OnReturnSucceeded` only after the claim is cleared and the terminal is back in the pool, `PocketTerminal_OnReturnFailed` when ownership retries are exhausted, and `PocketTerminal_OnReturnCancelled` for a stale or no-longer-valid request. A failed or cancelled return resets the return state, so the terminal stays usable and the player can try again.
+
 Return approval is synchronous: during `PocketTerminal_RequestReturn`, save game-owned state and call `session.PocketTerminal_ApproveReturn()`. If it is not called in that event, the terminal remains active. The pool revalidates the claimant and generation before it releases the slot.
 
 The pool alone writes `(slot, claimantPlayerId, generation)`. A terminal accepts a callback only for that exact authoritative tuple after terminal root, SDK session, and game behavior ownership have reached the claimant. Those three objects transfer ownership together.

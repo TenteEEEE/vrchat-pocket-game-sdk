@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using TMPro;
 using UdonSharp;
 using UdonSharp.Compiler;
@@ -34,23 +35,42 @@ namespace VrcPocketGame.Editor
             // finish before creating assets, then import the whole batch together.
             UdonSharpCompilerV1.CompileSync(new UdonSharpCompileOptions { IsEditorBuild = true });
             if (!AssetDatabase.IsValidFolder(GeneratedRoot)) AssetDatabase.CreateFolder("Assets", "VrcPocketGameGenerated");
+            var createdPaths = new List<string>();
             AssetDatabase.StartAssetEditing();
             try
             {
-                EnsureProgram(typeof(PocketGameTerminalPool));
-                EnsureProgram(typeof(PocketGameTerminalSession));
-                EnsureProgram(typeof(PocketGameInputRelay));
-                EnsureProgram(typeof(PocketGameUi));
-                foreach (var type in gameTypes) EnsureProgram(type);
+                EnsureProgram(typeof(PocketGameTerminalPool), createdPaths);
+                EnsureProgram(typeof(PocketGameTerminalSession), createdPaths);
+                EnsureProgram(typeof(PocketGameInputRelay), createdPaths);
+                EnsureProgram(typeof(PocketGameUi), createdPaths);
+                foreach (var type in gameTypes) EnsureProgram(type, createdPaths);
             }
             finally { AssetDatabase.StopAssetEditing(); }
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh(ImportAssetOptions.ForceSynchronousImport);
+            var stampedPaths = new List<string>();
+            // Fresh assets stay at Unknown until UdonSharp's deferred upgrade pass, which is
+            // internal; stamping here lets CopyToUdon run in the same installation pass.
+            foreach (var path in createdPaths)
+            {
+                var asset = AssetDatabase.LoadAssetAtPath<UdonSharpProgramAsset>(path);
+                if (asset != null && asset.ScriptVersion < UdonSharpProgramVersion.CurrentVersion)
+                {
+                    asset.ScriptVersion = UdonSharpProgramVersion.CurrentVersion;
+                    EditorUtility.SetDirty(asset);
+                    stampedPaths.Add(AssetDatabase.GetAssetPath(asset));
+                }
+            }
+            if (stampedPaths.Count > 0)
+            {
+                AssetDatabase.SaveAssets();
+                Debug.Log("[Pocket Game SDK] Marked newly generated program assets as current so installation can finish in one pass:\n" + string.Join("\n", stampedPaths));
+            }
             UdonSharpCompilerV1.CompileSync(new UdonSharpCompileOptions { IsEditorBuild = true });
             if (UdonSharpProgramAsset.AnyUdonSharpScriptHasError()) throw new InvalidOperationException("UdonSharp compilation failed; see Console.");
         }
 
-        private static void EnsureProgram(Type type)
+        private static void EnsureProgram(Type type, List<string> createdPaths)
         {
             MonoScript source = null;
             foreach (var id in AssetDatabase.FindAssets(type.Name + " t:MonoScript"))
@@ -66,6 +86,7 @@ namespace VrcPocketGame.Editor
                 asset = ScriptableObject.CreateInstance<UdonSharpProgramAsset>();
                 asset.sourceCsScript = source;
                 AssetDatabase.CreateAsset(asset, path);
+                createdPaths.Add(path);
             }
             if (asset.sourceCsScript != source) { asset.sourceCsScript = source; EditorUtility.SetDirty(asset); }
         }
@@ -116,6 +137,22 @@ namespace VrcPocketGame.Editor
 
         public static void CopyToUdon(GameObject root)
         {
+            var notReady = new List<string>();
+            foreach (var behaviour in root.GetComponentsInChildren<UdonSharpBehaviour>(true))
+            {
+                var asset = UdonSharpEditorUtility.GetUdonSharpProgramAsset(behaviour);
+                var scriptOutdated = asset == null || asset.ScriptVersion < UdonSharpProgramVersion.CurrentVersion;
+                var compiledOutdated = asset != null && asset.CompiledVersion < UdonSharpProgramVersion.CurrentVersion;
+                if (!scriptOutdated && !compiledOutdated) continue;
+                var assetPath = asset != null ? AssetDatabase.GetAssetPath(asset) : "<missing program asset>";
+                var versions = scriptOutdated && compiledOutdated ? "script and compiled versions are outdated"
+                    : scriptOutdated ? "script version is outdated" : "compiled version is outdated";
+                var reason = asset == null ? "no program asset is assigned" : versions;
+                notReady.Add(behaviour.GetType().Name + " on '" + behaviour.gameObject.name + "' at '" + assetPath + "': " + reason);
+            }
+            if (notReady.Count > 0)
+                throw new InvalidOperationException("Pocket Game SDK: Udon program assets are not ready.\n" + string.Join("\n", notReady) +
+                    "\nLet Unity finish compiling, then run the installer again.");
             foreach (var behaviour in root.GetComponentsInChildren<UdonSharpBehaviour>(true))
                 UdonSharpEditorUtility.CopyProxyToUdon(behaviour);
         }
