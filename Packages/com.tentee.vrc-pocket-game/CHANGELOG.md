@@ -60,11 +60,9 @@
 - Separate core/sample assemblies, terminal/UI builders, structural validation, package checker, and ClientSim smoke driver.
 - VPM package project layout and GitHub release workflow.
 
-### Breaking changes
+### Package layout
 
-- Removed the 0.1.0 slot-specific runtime and installer.
-- Replaced its game-coupled surface with `PocketGameTerminalSession` and the five-event contract.
-- Generated Udon assets now live in the consuming project's `Assets` folder.
+- Generated Udon assets live in the consuming project's `Assets` folder.
 
 ### Validation
 

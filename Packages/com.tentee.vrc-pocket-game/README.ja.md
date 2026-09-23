@@ -9,11 +9,11 @@ VRChat ワールド向けの個人ゲーム端末 SDK です。Core はプール
 3. VCC のパッケージ一覧から Worlds プロジェクトへ **VRChat Pocket Game SDK** を追加します。
 4. ワールドシーンで **Tools > VRC Pocket Game SDK > Install Counter Sample** を実行します。
 
-生成 Udon asset と sample scene は `Assets/VrcPocketGameGenerated` に置かれ、`Packages` は変更しません。
+メニュー操作は**現在のシーン**にサンプルを追加し、生成 Udon asset を `Assets/VrcPocketGameGenerated` に置きます。シーンは自分で保存してください。`InstallAndValidateBatch` を実行した場合は `Assets/VrcPocketGameGenerated/CounterSample.unity` にサンプルシーンも保存します。いずれも `Packages` は変更しません。
 
 ## 新しいゲーム
 
-ゲーム専用 runtime assembly を作り、`PocketGameTerminalBuilder.Create` と `PocketGameUiBuilder` を使います。`PocketGameTerminalProfile` で筐体、画面、Pickup、drawer を設定でき、追加の操作可能な drawer には `CreateExternalCanvas` と `ResizeCanvas` を使います。従来の `Create(..., Vector2 screenSize)` overload も引き続き使えます。session の `gameEvents`、`ui`、`pickup` を設定します。同期データと PlayerData schema はゲーム側の責務です。`author.game.v1` のような安定した `gameId` namespace を使い、借用した pool slot をキーに含めません。手順全体は [Extending the SDK](docs/EXTENDING.md) を参照してください。すべてのゲーム入力で `session.CanUseGameInput()` を確認します。
+ゲーム専用 runtime assembly を作り、`PocketGameTerminalBuilder.Create` と `PocketGameUiBuilder` を使います。`PocketGameTerminalProfile` で筐体、画面、Pickup、drawer を設定でき、追加の操作可能な drawer には `CreateExternalCanvas` と `ResizeCanvas` を使います。従来の `Create(..., Vector2 screenSize)` overload も引き続き使えます。ゲームのビヘイビアを `session.gameEvents` に接続します。`session.ui` と `session.pickup` は builder が設定済みです。同期データと PlayerData schema はゲーム側の責務です。`author.game.v1` のような安定した `gameId` namespace を使い、借用した pool slot をキーに含めません。手順全体は [Extending the SDK](docs/EXTENDING.md) を参照してください。すべてのゲーム入力で `session.CanUseGameInput()` を確認します。
 
 `PocketGameBehaviour` は推奨される任意の基底クラスです。`terminalSession` と `ui`、イベントフック、`CanUseGameInput()`、`IsLocalClaimant()` を提供します。基底クラスを使わない場合も、従来のイベント契約を利用できます。派生ゲームは独自の `[UdonBehaviourSyncMode]` を宣言してください。ゲームメソッドを直接呼ぶ UI ボタンは SDK による入力制限を受けないため、各メソッドで `CanUseGameInput()` を呼び出してください。`session.IsLocalClaimant()` には `IsCurrentSession()` の確認も含まれます。シーン検証では、各ゲームオブジェクト上のいずれかのビヘイビアが `OnOwnershipRequest` を `session.CanPlayerOwnTerminal` に転送するか、`PocketGameBehaviour` を継承する必要があります。詳しくは [Extending the SDK](docs/EXTENDING.md) を参照してください。
 
@@ -25,8 +25,4 @@ Scene validator は既存の配線チェックの前に、SDK 階層の Program 
 
 `python Tools/verify-package.py` を実行してください。ClientSim は `Tests~/ClientSim/PocketGameSmokeDriver.cs` を検証プロジェクトの `Assets` にコピーし、Input Handling を **Both** にします。通常の VCC Worlds project と `UDON`、`VRC_SDK_VRCSDK3`、`UDONSHARP`、`VRC_ENABLE_PLAYER_PERSISTENCE` を含む VRChat SDK scripting define が必要です。`PocketGameClientSimSmoke.RunBatch` は **`-quit` なし**で実行します。
 
-独立した Unity 2022.3.22f1 / Worlds 3.10.5 project で ClientSim smoke test は通過しました。実 Udon の claim、action、retry、drawers、modal、scale、stow、restore、reset と、別 pool terminal を借りた後の保存値復元を確認しています。通常画面、overlay、external drawer の Unity render 目視確認も通過しました。詳細は [検証結果](docs/VALIDATION.md) を参照してください。
-
-## 0.2.0 の破壊的変更
-
-0.1.0 の slot 専用 runtime/installer は削除されました。`PocketGameTerminalSession` と 5-event contract がゲーム結合 surface を置き換え、生成 asset は consuming project の `Assets` に置かれます。
+検証したバージョンと範囲は [検証記録](docs/VALIDATION.md)、リリース履歴は [CHANGELOG](CHANGELOG.md) を参照してください。

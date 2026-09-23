@@ -13,7 +13,7 @@
 1. Unity **2022.3.22f1**、VRChat Worlds **3.10.5 以降**の Worlds プロジェクトを用意します。**Window > TextMeshPro > Import TMP Essential Resources** を先に実行します。
 2. VRChat Creator Companion に `https://tenteeeee.github.io/vpm-repos/index.json` をカスタム VPM リポジトリとして登録し、**VRChat Pocket Game SDK** を追加します。
 3. ワールドシーンを開き、**Tools > VRC Pocket Game SDK > Install Counter Sample** を実行します。現在のシーンにキオスクと、プールされた端末 2 台が追加されます。
-4. ローカル検証用に ClientSim を導入して Play モードに入ります。キオスクから端末を呼んで手に持ち、**+1** または Pickup Use で操作します。**Settings > Save & stow** で返却し、再度呼ぶと保存されたカウントを確認できます。
+4. ローカル検証用に ClientSim を導入し、Unity の Player 設定で **Active Input Handling** を **Both** にして Play モードに入ります。キオスクから端末を呼んで手に持ち、**+1** または Pickup Use で操作します。**Settings > Save & stow** で返却し、再度呼ぶと保存されたカウントを確認できます。
 
 インストーラーは生成 Udon アセットを `Assets/VrcPocketGameGenerated` に配置し、`Packages` 以下は変更しません。サンプルでは観戦表示、画面上のドロワー、独立したワールド空間のドロワー、モーダル表示中の入力制限も確認できます。詳細は[パッケージの README](Packages/com.tentee.vrc-pocket-game/README.ja.md)と[検証記録](Packages/com.tentee.vrc-pocket-game/docs/VALIDATION.md)を参照してください。
 
