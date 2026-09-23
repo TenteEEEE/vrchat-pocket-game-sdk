@@ -1,5 +1,17 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+
+- PocketGameUi panel controls, indexed confirmation panels, help-page queries and notifications, optional extra drawers, and arbitrary scale multipliers.
+- Standard world, terminal, and terminal-effect canvas sorting orders; terminal builders apply the terminal order and kiosk sample uses the world order.
+
+### Documentation
+
+- Documented canvas sorting order guidance and custom render-queue caveats.
+
+
 ## [0.4.0] - 2026-09-23
 
 ### Added

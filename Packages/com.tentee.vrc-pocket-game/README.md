@@ -31,7 +31,7 @@ The pool alone writes `(slot, claimantPlayerId, generation)`. A terminal accepts
 
 ## UI and validation
 
-An overlay drawer lives above the main game screen. An external drawer is a separate world-space panel. Modal and confirmation UI take priority and block game input; UI does not pause game simulation.
+An overlay drawer lives above the main game screen. An external drawer is a separate world-space panel. Register additional game-owned drawers in `extraDrawers` to manage them through the UI API and optionally close them with modals. Help/settings panels, indexed confirmations, help-page queries, and continuous `SetScale(float)` are available alongside the legacy methods. Modal and confirmation UI take priority and block game input; UI does not pause game simulation. World-space canvas sorting uses order 0 for fixed signage, 10 for terminal canvases, and 11 for terminal effects; custom transparent render queues can overlap unrelated world transparency.
 
 The scene validator checks program assets, ownership, sync mode, modal wiring, and the existing structural/UI layout rules. It collects program-asset and ownership problems in one message. The repository runs `python -X utf8 Tools/verify-package.py` before publishing. Unity batch entry points are `VrcPocketGame.Editor.PocketGameInstaller.PrepareProgramAssetsBatch`, `ValidateCurrentScene`, and `InstallAndValidateBatch`. Copy `Tests~/Validation/PocketGameValidatorFaultDriver.cs` into a validation project's `Assets` and run `PocketGameValidatorFaultDriver.RunBatch` to exercise validator failures.
 

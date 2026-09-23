@@ -178,7 +178,7 @@ namespace VrcPocketGame.Editor
             parts.GameStateSlot = new GameObject("Game state").transform;
             parts.GameStateSlot.SetParent(parts.Root.transform, false);
             parts.MainCanvas = PocketGameUiBuilder.Canvas(parts.Root.transform, "Main screen", screenSize,
-                profile.ScreenOffset, profile.ScreenPixelScale);
+                profile.ScreenOffset, profile.ScreenPixelScale, PocketGameUi.TerminalUiSortingOrder);
             PocketGameUiBuilder.Panel(parts.MainCanvas.transform, "Background", screenSize, Vector2.zero, theme.Background);
             parts.HeaderSlot = PocketGameUiBuilder.Slot(parts.MainCanvas.transform, "Header", new Vector2(screenSize.x - 48, 72), new Vector2(0, screenSize.y / 2 - 48));
             parts.ContentSlot = PocketGameUiBuilder.Slot(parts.MainCanvas.transform, "Content", new Vector2(screenSize.x - 48, screenSize.y - 220), new Vector2(0, 12));
@@ -200,7 +200,7 @@ namespace VrcPocketGame.Editor
         public static Canvas CreateExternalCanvas(PocketGameTerminalParts parts, string name, Vector2 size, Vector3 localPosition)
         {
             if (!(size.x > 0) || !(size.y > 0)) throw new ArgumentException("Canvas size components must be greater than zero.", nameof(size));
-            return PocketGameUiBuilder.Canvas(parts.Root.transform, name, size, localPosition, parts.Profile.ScreenPixelScale);
+            return PocketGameUiBuilder.Canvas(parts.Root.transform, name, size, localPosition, parts.Profile.ScreenPixelScale, PocketGameUi.TerminalUiSortingOrder);
         }
 
         public static void CopyToUdon(GameObject root)

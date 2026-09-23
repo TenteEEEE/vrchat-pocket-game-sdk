@@ -293,10 +293,23 @@ namespace VrcPocketGame.Editor
             else if (ui.terminalSession != session)
                 findings.Error("Slot " + slot + " UI at '" + Path(ui.transform) + "' (type " + uiType.FullName + ", asset '" + uiPath + "') references a different terminal session at '" + Path(ui.terminalSession.transform) + "' (type " + typeof(PocketGameTerminalSession).FullName + ", asset '" + PocketGameTerminalBuilder.GeneratedRoot + "/PocketGameTerminalSession.asset').");
 
-            CheckModal(ui.confirmPanel, "confirmPanel", ui, root, session, uiBehaviour, uiType, uiPath, slot, findings);
+            if (ui.confirmPanels != null && ui.confirmPanels.Length > 0)
+            {
+                for (var i = 0; i < ui.confirmPanels.Length; i++)
+                {
+                    var panel = ui.confirmPanels[i];
+                    CheckModal(panel, "confirmPanels[" + i + "]", ui, root, session, uiBehaviour, uiType, uiPath, slot, findings);
+                    if (panel != null && panel.activeSelf)
+                        findings.Warning("Slot " + slot + " confirmPanels[" + i + "] '" + Path(panel.transform) + "' is active in the saved scene (asset '" + uiPath + "').");
+                }
+            }
+            else
+            {
+                CheckModal(ui.confirmPanel, "confirmPanel", ui, root, session, uiBehaviour, uiType, uiPath, slot, findings);
+                if (ui.confirmPanel != null && ui.confirmPanel.activeSelf)
+                    findings.Warning("Slot " + slot + " confirmPanel '" + Path(ui.confirmPanel.transform) + "' is active in the saved scene (asset '" + uiPath + "').");
+            }
             CheckModal(ui.inputModal, "inputModal", ui, root, session, uiBehaviour, uiType, uiPath, slot, findings);
-            if (ui.confirmPanel != null && ui.confirmPanel.activeSelf)
-                findings.Warning("Slot " + slot + " confirmPanel '" + Path(ui.confirmPanel.transform) + "' is active in the saved scene (asset '" + uiPath + "').");
             if (ui.inputModal != null && ui.inputModal.activeSelf)
                 findings.Warning("Slot " + slot + " inputModal '" + Path(ui.inputModal.transform) + "' is active in the saved scene (asset '" + uiPath + "').");
 
@@ -311,7 +324,7 @@ namespace VrcPocketGame.Editor
                     if (call.FindPropertyRelative("m_Target").objectReferenceValue != uiBehaviour) continue;
                     var eventName = call.FindPropertyRelative("m_Arguments.m_StringArgument").stringValue;
                     var context = "Button '" + Path(button.transform) + "' calls " + eventName + " on UI '" + Path(ui.transform) + "' (asset '" + uiPath + "').";
-                    if (eventName == "ShowConfirm" && ui.confirmPanel == null) findings.Error("Slot " + slot + " " + context + " confirmPanel is null.");
+                    if (eventName == "ShowConfirm" && ui.confirmPanel == null && (ui.confirmPanels == null || ui.confirmPanels.Length == 0 || ui.confirmPanels[0] == null)) findings.Error("Slot " + slot + " " + context + " confirmPanel is null.");
                     if (eventName == "OpenInputModal" && ui.inputModal == null) findings.Error("Slot " + slot + " " + context + " inputModal is null.");
                 }
             }

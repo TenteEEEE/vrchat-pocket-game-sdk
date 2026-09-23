@@ -35,7 +35,7 @@ sequenceDiagram
 
 - [ ] 既存ゲームは変更なしで動く（必須イベント・公開 API の破壊的変更なし）
 - [ ] AGENTS.md の不変条件を維持（pool のみが claim を書く / `(slot, claimant, generation)` / 同期的な返却承認 など）
-- [ ] CHANGELOG・docs・`package.json` の version を更新
+- [ ] CHANGELOG・docs を更新（VPM version は release tag から生成されるため `package.json` は更新しない）
 
 ## 未解決・既知の制限
 
