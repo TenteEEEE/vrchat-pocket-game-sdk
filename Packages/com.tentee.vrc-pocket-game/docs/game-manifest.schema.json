@@ -1,0 +1,137 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/TenteEEEE/vrchat-pocket-game-sdk/main/Packages/com.tentee.vrc-pocket-game/docs/game-manifest.schema.json",
+  "title": "VRChat Pocket Game catalog manifest v1 (proposal)",
+  "description": "Public, static metadata for one game built with VRChat Pocket Game SDK. This is not a world installation or PlayerData configuration.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "id", "version", "defaultLocale", "localizations", "languages", "genres", "author", "links"],
+  "properties": {
+    "$schema": { "type": "string", "pattern": "^https://[^\\s]+$" },
+    "schemaVersion": { "const": 1 },
+    "id": {
+      "type": "string",
+      "description": "Permanent, globally unique reverse-domain-style catalog ID. Never derive it from a display name, pool slot, or save schema version.",
+      "pattern": "^[a-z0-9]+(?:[.-][a-z0-9]+)*\\.[a-z0-9]+(?:[.-][a-z0-9]+)*$",
+      "maxLength": 120
+    },
+    "version": {
+      "type": "string",
+      "description": "Game content version, independent of the SDK and manifest schema versions.",
+      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(?:-[0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*)?$"
+    },
+    "defaultLocale": { "$ref": "#/$defs/locale" },
+    "localizations": {
+      "type": "object",
+      "description": "Catalog text keyed by BCP 47 language tag. Must contain defaultLocale; catalog tooling checks this cross-field rule.",
+      "minProperties": 1,
+      "propertyNames": { "$ref": "#/$defs/locale" },
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "summary"],
+        "properties": {
+          "name": { "type": "string", "minLength": 1, "maxLength": 80 },
+          "summary": { "type": "string", "minLength": 1, "maxLength": 240 },
+          "description": { "type": "string", "minLength": 1, "maxLength": 2000 }
+        }
+      }
+    },
+    "languages": {
+      "type": "array",
+      "description": "Languages available in the game's UI/content, not the languages of this manifest.",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/locale" }
+    },
+    "genres": {
+      "type": "array",
+      "description": "Controlled filter vocabulary. A catalog may display localized labels for these stable values.",
+      "minItems": 1,
+      "maxItems": 3,
+      "uniqueItems": true,
+      "items": {
+        "enum": ["action", "adventure", "arcade", "casual", "party", "puzzle", "rhythm", "role-playing", "simulation", "strategy", "other"]
+      }
+    },
+    "tags": {
+      "type": "array",
+      "description": "Optional searchable keywords. Catalog maintainers may normalize or moderate tags before publication.",
+      "maxItems": 8,
+      "uniqueItems": true,
+      "items": { "type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$", "maxLength": 32 }
+    },
+    "playModes": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "enum": ["solo", "cooperative", "competitive"] }
+    },
+    "inputModes": {
+      "type": "array",
+      "description": "Supported ways to control the game; independent of upload platform.",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "enum": ["desktop", "vr", "mobile-touch"] }
+    },
+    "platforms": {
+      "type": "array",
+      "description": "VRChat world builds on which this game has been tested. Omit when unverified.",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "enum": ["windows", "android", "ios"] }
+    },
+    "author": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "url": { "$ref": "#/$defs/httpsUrl" }
+      }
+    },
+    "media": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "HTTPS media URLs usable by an external catalog. The catalog should proxy/cache and verify media before displaying it.",
+      "properties": {
+        "iconUrl": { "$ref": "#/$defs/httpsUrl" },
+        "coverUrl": { "$ref": "#/$defs/httpsUrl" },
+        "trailerUrl": { "$ref": "#/$defs/httpsUrl" }
+      }
+    },
+    "links": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["projectUrl"],
+      "properties": {
+        "projectUrl": { "$ref": "#/$defs/httpsUrl" },
+        "installUrl": { "$ref": "#/$defs/httpsUrl" },
+        "worldUrl": { "$ref": "#/$defs/httpsUrl" }
+      }
+    },
+    "sdkCompatibility": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Declared and verified SDK compatibility, not a package resolver dependency.",
+      "required": ["minimumVersion"],
+      "properties": {
+        "minimumVersion": { "$ref": "#/$defs/version" },
+        "testedVersion": { "$ref": "#/$defs/version" }
+      }
+    },
+    "installation": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Nonbinding guidance for world authors; actual pool size is configured per world.",
+      "properties": {
+        "recommendedPoolSize": { "type": "integer", "minimum": 1 }
+      }
+    }
+  },
+  "$defs": {
+    "locale": { "type": "string", "pattern": "^[a-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$" },
+    "httpsUrl": { "type": "string", "pattern": "^https://[^\\s]+$", "maxLength": 2048 },
+    "version": { "type": "string", "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$" }
+  }
+}
