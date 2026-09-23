@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.2] - 2026-09-23
+
+### Added
+
+- `PocketGameTerminalProfile` and a profile-based `Create` overload, plus `PocketGameTerminalParts.Profile`, `CreateExternalCanvas`, and `ResizeCanvas` for configurable terminals and correctly sized interactive drawers.
+- Profile defaults reproduce 0.3.1 terminals; the existing `Create(..., Vector2 screenSize)` overload is unchanged.
+
 ## [0.3.1] - 2026-09-23
 
 ### Added

@@ -42,4 +42,26 @@ PocketGameTerminalBuilder.CopyToUdon(parts.Root);
 
 This outline assumes the copied game keeps the sample's field names; import `VrcPocketGame`, `VrcPocketGame.Editor`, `UdonSharpEditor`, and `UnityEngine`. `parent`, `pool`, `slot`, and `theme` come from your installer. `Create` already assigns the session pickup and connects its UI/session references. Add game content to `HeaderSlot`, `ContentSlot`, `ActionSlot`, and `OverlaySlot`. Use `ExternalCanvas` for the external drawer. Assign overlay, external, help, settings, confirmation, and input-modal references on `parts.Ui`, then call `ResetForSession` before the terminal is pooled. Call `CopyToUdon` after all final field assignments, populate the pool's terminal/session arrays as in the sample installer, and validate the completed scene.
 
+Use a profile when the game needs a different physical shell, pickup, or drawer layout. Canvas sizes remain in pixels; offsets, scale, and Rigidbody values describe the physical terminal. Pickup types come from `VRC.SDKBase`:
+
+```csharp
+var profile = new PocketGameTerminalProfile
+{
+    RootScale = .4f,
+    ScreenPixelScale = .00066f,
+    Mass = .8f,
+    Drag = .1f,
+    PickupProximity = 1.5f,
+    PickupOrientation = VRC_Pickup.PickupOrientation.Grip,
+    PickupAutoHold = VRC_Pickup.AutoHoldMode.No,
+    ExternalCanvasSize = new Vector2(320, 520)
+};
+var parts = PocketGameTerminalBuilder.Create(parent, "My terminal", pool, slot, theme, profile);
+// Offsets are root-local metres; RootScale scales the whole terminal, drawers included.
+var leftDrawer = PocketGameTerminalBuilder.CreateExternalCanvas(parts, "Left drawer",
+    new Vector2(320, 520), new Vector3(-.39f, 0, -.025f));
+```
+
+When a canvas must change size after creation, use `PocketGameUiBuilder.ResizeCanvas` instead of editing a canvas `RectTransform` directly, so its interactive collider stays in sync. Additional drawers are game-owned for visibility; the SDK toggles only `parts.ExternalCanvas`.
+
 Keep only spectator-facing data in the game's synced fields. Call `RequestSerialization` after claimant-owned changes and refresh presentation in `OnDeserialization`. PlayerData is a separate local persistence channel: load after the SDK accepts the restored claimant, version your schema, and save at meaningful game checkpoints. Return approval confirms that the game allows release; it does not acknowledge a cloud write.
