@@ -13,6 +13,8 @@ VRChat ワールド向けの個人ゲーム端末 SDK です。Core はプール
 
 ## 新しいゲーム
 
+将来の公開ゲーム一覧向けに、任意の [ゲームカタログ用マニフェスト v1 案](docs/GAME_MANIFEST.md)を用意しています。ゲームID、言語別の表示名、ゲーム内対応言語、ジャンル、タグ、互換性、推奨pool数をJSONで記載できます。実際のpool数とPlayerDataの保存形式はワールド・ゲーム側で管理します。
+
 ゲーム専用 runtime assembly を作り、`PocketGameTerminalBuilder.Create` と `PocketGameUiBuilder` を使います。`PocketGameTerminalProfile` で筐体、画面、Pickup、drawer を設定でき、追加の操作可能な drawer には `CreateExternalCanvas` と `ResizeCanvas` を使います。従来の `Create(..., Vector2 screenSize)` overload も引き続き使えます。ゲームのビヘイビアを `session.gameEvents` に接続します。`session.ui` と `session.pickup` は builder が設定済みです。同期データと PlayerData schema はゲーム側の責務です。`author.game.v1` のような安定した `gameId` namespace を使い、借用した pool slot をキーに含めません。手順全体は [Extending the SDK](docs/EXTENDING.md) を参照してください。すべてのゲーム入力で `session.CanUseGameInput()` を確認します。
 
 `PocketGameBehaviour` は推奨される任意の基底クラスです。`terminalSession` と `ui`、イベントフック、`CanUseGameInput()`、`IsLocalClaimant()` を提供します。基底クラスを使わない場合も、従来のイベント契約を利用できます。派生ゲームは独自の `[UdonBehaviourSyncMode]` を宣言してください。ゲームメソッドを直接呼ぶ UI ボタンは SDK による入力制限を受けないため、各メソッドで `CanUseGameInput()` を呼び出してください。`session.IsLocalClaimant()` には `IsCurrentSession()` の確認も含まれます。シーン検証では、各ゲームオブジェクト上のいずれかのビヘイビアが `OnOwnershipRequest` を `session.CanPlayerOwnTerminal` に転送するか、`PocketGameBehaviour` を継承する必要があります。詳しくは [Extending the SDK](docs/EXTENDING.md) を参照してください。

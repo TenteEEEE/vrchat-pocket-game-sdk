@@ -1,0 +1,35 @@
+{
+  "$schema": "https://raw.githubusercontent.com/TenteEEEE/vrchat-pocket-game-sdk/main/Packages/com.tentee.vrc-pocket-game/docs/game-manifest.schema.json",
+  "schemaVersion": 1,
+  "id": "tentee.pocket.counter",
+  "version": "1.0.0",
+  "defaultLocale": "en",
+  "localizations": {
+    "en": {
+      "name": "Pocket Counter",
+      "summary": "A small counter game demonstrating personal terminals and persistent progress."
+    },
+    "ja": {
+      "name": "Pocket Counter",
+      "summary": "個人用端末と進行状況の保存を示す、小さなカウンターゲーム。"
+    }
+  },
+  "languages": ["en"],
+  "genres": ["casual"],
+  "tags": ["sample", "counter"],
+  "playModes": ["solo"],
+  "inputModes": ["desktop", "vr"],
+  "author": {
+    "name": "TenteEEEE",
+    "url": "https://github.com/TenteEEEE"
+  },
+  "links": {
+    "projectUrl": "https://github.com/TenteEEEE/vrchat-pocket-game-sdk"
+  },
+  "sdkCompatibility": {
+    "minimumVersion": "0.4.0"
+  },
+  "installation": {
+    "recommendedPoolSize": 4
+  }
+}

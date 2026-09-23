@@ -8,3 +8,5 @@ Verification mapping: run `python Tools/verify-package.py` for package boundarie
 For validator fault checks, copy `Tests~/Validation/PocketGameValidatorFaultDriver.cs` into the validation project's `Assets` and run `PocketGameValidatorFaultDriver.RunBatch`.
 
 Do not reintroduce removed slot APIs, edit generated assets under Packages, claim unsupported Udon limitations, or add agents for routine work. Keep changes narrow and readable.
+
+Optional public game metadata is specified in `Packages/com.tentee.vrc-pocket-game/docs/GAME_MANIFEST.md` and `game-manifest.schema.json`. When creating or editing a game's `pocket-game.json`, use the example, keep its catalog `id` stable, separate catalog translations from in-game `languages`, and state only verified platform/input support. Do not infer catalog approval from a manifest. Keep actual pool size and PlayerData save schema outside this public manifest; `installation.recommendedPoolSize` is advisory.

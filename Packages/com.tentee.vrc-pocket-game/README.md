@@ -13,6 +13,8 @@ The menu command adds the sample to the **current scene** and writes generated U
 
 ## Create a new game
 
+For a future public game listing, the optional [game catalog manifest v1 draft](docs/GAME_MANIFEST.md) defines a machine-readable game ID, localized names, gameplay languages, genres, tags, compatibility, and install guidance. It is separate from the SDK package manifest, actual world pool count, and PlayerData save schema.
+
 Create a game-specific runtime assembly. Build terminals through `PocketGameTerminalBuilder.Create` and UI through `PocketGameUiBuilder`; use `PocketGameTerminalProfile` for shell, screen, pickup, and drawer settings, and `CreateExternalCanvas`/`ResizeCanvas` for additional interactive drawers. The old `Create(..., Vector2 screenSize)` overload remains available. Do not copy the sample installer as a framework. Connect the game's behavior to `session.gameEvents`; the builder already assigns `session.ui` and `session.pickup`. The game owns its synced data and save schema. Use a durable `gameId` namespace such as `author.game.v1`; never use a borrowed pool slot in PlayerData keys. See [Extending the SDK](docs/EXTENDING.md) for a complete installer sequence.
 
 Every game input entry point must call `session.CanUseGameInput()`. It combines local claimant authority, accepted session identity, return state, and modal state.

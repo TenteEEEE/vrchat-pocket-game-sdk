@@ -6,6 +6,8 @@ Register the new runtime assembly in its own `UdonSharpAssemblyDefinition` asset
 
 Your game behavior owns game rules, manually synced spectator state, and PlayerData. Give saves a stable game ID prefix in `saveNamespace`, for example `myname.pocket.mygame.v1`. Do not serialize shell claim state into the game, and do not put a terminal-pool index in PlayerData keys.
 
+If you want your game to be eligible for a future public game catalog, see the optional [game manifest v1 proposal](GAME_MANIFEST.md) and add a `pocket-game.json` to your game project. Its catalog `id`, localized display text, gameplay `languages`, genres, and tags are public metadata; the actual pool size and PlayerData save schema remain in your game/world configuration. The manifest alone does not publish the game.
+
 `PocketGameBehaviour` is the recommended optional base. It provides the public `terminalSession` and `ui` fields, input and claimant helpers, ownership forwarding, and the event hooks below. Derived games keep their own `[UdonBehaviourSyncMode]`. The raw event contract remains supported for games that do not derive from the base.
 
 Override these hooks when deriving from `PocketGameBehaviour` (otherwise implement the raw event names shown in the first column):
