@@ -9,11 +9,11 @@ A game-neutral SDK for pooled personal terminals in VRChat worlds. Core supplies
 3. Add **VRChat Pocket Game SDK** to a Worlds project from VCC's package list.
 4. Open a world scene, then run **Tools > VRC Pocket Game SDK > Install Counter Sample**.
 
-The installer writes generated Udon assets and the sample scene under `Assets/VrcPocketGameGenerated`; it does not write into `Packages`. It creates a kiosk, pickup/stow/recall terminals, owner-only counter input, spectator sync, PlayerData persistence, an overlay drawer, and a separate external world-space drawer.
+The menu command adds the sample to the **current scene** and writes generated Udon assets under `Assets/VrcPocketGameGenerated`; save the scene yourself. `InstallAndValidateBatch` also saves a sample scene at `Assets/VrcPocketGameGenerated/CounterSample.unity`. Neither path writes into `Packages`. The sample creates a kiosk, pickup/stow/recall terminals, owner-only counter input, spectator sync, PlayerData persistence, an overlay drawer, and a separate external world-space drawer.
 
 ## Create a new game
 
-Create a game-specific runtime assembly. Build terminals through `PocketGameTerminalBuilder.Create` and UI through `PocketGameUiBuilder`; use `PocketGameTerminalProfile` for shell, screen, pickup, and drawer settings, and `CreateExternalCanvas`/`ResizeCanvas` for additional interactive drawers. The old `Create(..., Vector2 screenSize)` overload remains available. Do not copy the sample installer as a framework. Assign the session's `gameEvents`, `ui`, and `pickup` fields. The game owns its synced data and save schema. Use a durable `gameId` namespace such as `author.game.v1`; never use a borrowed pool slot in PlayerData keys. See [Extending the SDK](docs/EXTENDING.md) for a complete installer sequence.
+Create a game-specific runtime assembly. Build terminals through `PocketGameTerminalBuilder.Create` and UI through `PocketGameUiBuilder`; use `PocketGameTerminalProfile` for shell, screen, pickup, and drawer settings, and `CreateExternalCanvas`/`ResizeCanvas` for additional interactive drawers. The old `Create(..., Vector2 screenSize)` overload remains available. Do not copy the sample installer as a framework. Connect the game's behavior to `session.gameEvents`; the builder already assigns `session.ui` and `session.pickup`. The game owns its synced data and save schema. Use a durable `gameId` namespace such as `author.game.v1`; never use a borrowed pool slot in PlayerData keys. See [Extending the SDK](docs/EXTENDING.md) for a complete installer sequence.
 
 Every game input entry point must call `session.CanUseGameInput()`. It combines local claimant authority, accepted session identity, return state, and modal state.
 
@@ -31,14 +31,10 @@ The pool alone writes `(slot, claimantPlayerId, generation)`. A terminal accepts
 
 ## UI and validation
 
-An overlay drawer lives above the main game screen. An external drawer is a separate world-space panel. Register additional game-owned drawers in `extraDrawers` to manage them through the UI API and optionally close them with modals. Help/settings panels, indexed confirmations, help-page queries, and continuous `SetScale(float)` are available alongside the legacy methods. Modal and confirmation UI take priority and block game input; UI does not pause game simulation. World-space canvas sorting uses order 0 for fixed signage, 10 for terminal canvases, and 11 for terminal effects; custom transparent render queues can overlap unrelated world transparency.
+An overlay drawer lives above the main game screen. An external drawer is a separate world-space panel. Register additional game-owned drawers in `extraDrawers` to manage them through the UI API and optionally close them with modals. Help/settings panels, indexed confirmations, help-page queries, and continuous `SetScale(float)` are available alongside the preset methods. Modal and confirmation UI take priority and block game input; UI does not pause game simulation. World-space canvas sorting uses order 0 for fixed signage, 10 for terminal canvases, and 11 for terminal effects; custom transparent render queues can overlap unrelated world transparency.
 
 The scene validator checks program assets, ownership, sync mode, modal wiring, and the existing structural/UI layout rules. It collects program-asset and ownership problems in one message. The repository runs `python -X utf8 Tools/verify-package.py` before publishing. Unity batch entry points are `VrcPocketGame.Editor.PocketGameInstaller.PrepareProgramAssetsBatch`, `ValidateCurrentScene`, and `InstallAndValidateBatch`. Copy `Tests~/Validation/PocketGameValidatorFaultDriver.cs` into a validation project's `Assets` and run `PocketGameValidatorFaultDriver.RunBatch` to exercise validator failures.
 
 For ClientSim, copy `Tests~/ClientSim/PocketGameSmokeDriver.cs` into the validation project's `Assets` folder, set Player **Input Handling** to **Both**, and use a normal VCC Worlds project with its VRChat SDK scripting defines (including `UDON`, `VRC_SDK_VRCSDK3`, `UDONSHARP`, and `VRC_ENABLE_PLAYER_PERSISTENCE`). Run `VrcPocketGame.Editor.PocketGameClientSimSmoke.RunBatch` without `-quit`.
 
-The ClientSim smoke test passed in an independent Unity 2022.3.22f1 / Worlds 3.10.5 project. It exercised real Udon claim, action, retry, drawers, modal blocking, scale, stow, restore, reset, and restore after borrowing a different pool terminal. Unity renders of the normal, overlay, and external-drawer screens also passed visual review. See [validation results](docs/VALIDATION.md).
-
-## Breaking changes in 0.2.0
-
-The former 0.1.0 slot-oriented runtime and installer are removed. `PocketGameTerminalSession` and the five-event contract replace the old game-coupled surface. Generated assets now belong under the consuming project's `Assets` folder.
+See the [validation record](docs/VALIDATION.md) for the tested versions and checks, and the [changelog](CHANGELOG.md) for release history.

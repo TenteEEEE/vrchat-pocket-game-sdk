@@ -38,11 +38,9 @@ game.terminalSession = parts.Session;
 game.ui = parts.Ui;
 game.saveNamespace = "myname.pocket.mygame.v1";
 parts.Session.gameEvents = UdonSharpEditorUtility.GetBackingUdonBehaviour(game);
-parts.Session.ui = parts.Ui;
-PocketGameTerminalBuilder.CopyToUdon(parts.Root);
 ```
 
-This outline assumes the copied game keeps the sample's field names; import `VrcPocketGame`, `VrcPocketGame.Editor`, `UdonSharpEditor`, and `UnityEngine`. `parent`, `pool`, `slot`, and `theme` come from your installer. `Create` already assigns the session pickup and connects its UI/session references. Add game content to `HeaderSlot`, `ContentSlot`, `ActionSlot`, and `OverlaySlot`. Use `ExternalCanvas` for the external drawer. Assign overlay, external, help, settings, confirmation, and input-modal references on `parts.Ui`, then call `ResetForSession` before the terminal is pooled. Call `CopyToUdon` after all final field assignments, populate the pool's terminal/session arrays as in the sample installer, and validate the completed scene.
+This outline assumes the copied game keeps the sample's field names; import `VrcPocketGame`, `VrcPocketGame.Editor`, `UdonSharpEditor`, and `UnityEngine`. `parent`, `pool`, `slot`, and `theme` come from your installer. `Create` already assigns the session pickup and connects its UI/session references. Add game content to `HeaderSlot`, `ContentSlot`, `ActionSlot`, and `OverlaySlot`. Use `ExternalCanvas` for the external drawer. Assign overlay, external, help, settings, confirmation, and input-modal references on `parts.Ui`, then call `ResetForSession` before the terminal is pooled. After all field assignments, call `PocketGameTerminalBuilder.CopyToUdon(parts.Root)`, populate the pool's terminal/session arrays as in the sample installer, and validate the completed scene.
 
 Use a profile when the game needs a different physical shell, pickup, or drawer layout. Canvas sizes remain in pixels; offsets, scale, and Rigidbody values describe the physical terminal. Pickup types come from `VRC.SDKBase`:
 
@@ -64,7 +62,9 @@ var leftDrawer = PocketGameTerminalBuilder.CreateExternalCanvas(parts, "Left dra
     new Vector2(320, 520), new Vector3(-.39f, 0, -.025f));
 ```
 
-When a canvas must change size after creation, use `PocketGameUiBuilder.ResizeCanvas` instead of editing a canvas `RectTransform` directly, so its interactive collider stays in sync. Additional drawers are game-owned for visibility; assign them to `ui.extraDrawers` to let SDK modals close them. `closeExtraDrawersOnModal` controls that behavior. Use `ToggleExtraDrawer(index)` / `SetExtraDrawerActive(index, active)` to manage them through the UI API.
+When a canvas must change size after creation, use `PocketGameUiBuilder.ResizeCanvas` instead of editing a canvas `RectTransform` directly, so its interactive collider stays in sync. Additional drawers are game-owned for visibility.
+
+Assign additional drawers to `ui.extraDrawers` to let SDK modals close them. `closeExtraDrawersOnModal` controls that behavior. Use `ToggleExtraDrawer(index)` / `SetExtraDrawerActive(index, active)` to manage them through the UI API.
 
 ## UI panels, help, and scale
 
