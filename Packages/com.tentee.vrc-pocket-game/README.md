@@ -13,7 +13,7 @@ The installer writes generated Udon assets and the sample scene under `Assets/Vr
 
 ## Create a new game
 
-Create a game-specific runtime assembly. Build terminals through `PocketGameTerminalBuilder.Create` and UI through `PocketGameUiBuilder`; do not copy the sample installer as a framework. Assign the session's `gameEvents`, `ui`, and `pickup` fields. The game owns its synced data and save schema. Use a durable `gameId` namespace such as `author.game.v1`; never use a borrowed pool slot in PlayerData keys. See [Extending the SDK](docs/EXTENDING.md) for a complete installer sequence.
+Create a game-specific runtime assembly. Build terminals through `PocketGameTerminalBuilder.Create` and UI through `PocketGameUiBuilder`; use `PocketGameTerminalProfile` for shell, screen, pickup, and drawer settings, and `CreateExternalCanvas`/`ResizeCanvas` for additional interactive drawers. The old `Create(..., Vector2 screenSize)` overload remains available. Do not copy the sample installer as a framework. Assign the session's `gameEvents`, `ui`, and `pickup` fields. The game owns its synced data and save schema. Use a durable `gameId` namespace such as `author.game.v1`; never use a borrowed pool slot in PlayerData keys. See [Extending the SDK](docs/EXTENDING.md) for a complete installer sequence.
 
 Every game input entry point must call `session.CanUseGameInput()`. It combines local claimant authority, accepted session identity, return state, and modal state.
 

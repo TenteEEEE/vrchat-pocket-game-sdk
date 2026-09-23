@@ -1,3 +1,4 @@
+using System;
 using TMPro;
 using UnityEditor.Events;
 using UnityEngine;
@@ -36,6 +37,19 @@ namespace VrcPocketGame.Editor
             collider.isTrigger = true;
             collider.size = new Vector3(size.x, size.y, 6f);
             return canvas;
+        }
+
+        /// <summary>Resizes a canvas and its interactive collider together, in canvas pixels.</summary>
+        public static void ResizeCanvas(Canvas canvas, Vector2 size)
+        {
+            if (!(size.x > 0) || !(size.y > 0)) throw new ArgumentException("Canvas size components must be greater than zero.", nameof(size));
+            var rect = canvas != null ? canvas.transform as RectTransform : null;
+            if (rect == null) throw new ArgumentException("Canvas must have a RectTransform.", nameof(canvas));
+            var collider = canvas.GetComponent<BoxCollider>();
+            if (collider == null && canvas.GetComponent<VRCUiShape>() != null)
+                throw new InvalidOperationException("Interactive canvas '" + canvas.name + "' has no BoxCollider.");
+            rect.sizeDelta = size;
+            if (collider != null) collider.size = new Vector3(size.x, size.y, collider.size.z != 0 ? collider.size.z : 6f);
         }
 
         public static RectTransform Slot(Transform parent, string name, Vector2 size, Vector2 position)
