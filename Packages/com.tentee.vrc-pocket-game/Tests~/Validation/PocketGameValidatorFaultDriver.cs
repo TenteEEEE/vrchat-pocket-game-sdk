@@ -53,6 +53,18 @@ public static class PocketGameValidatorFaultDriver
             UdonSharpEditorUtility.CopyProxyToUdon(uiProxy);
             var modalMessage = CaptureValidationFailure();
             Check(modalMessage.Contains("ShowConfirm") && modalMessage.Contains("confirmPanel is null"), "missing confirm panel reports ShowConfirm call");
+            PocketGameInstaller.InstallIntoCurrentScene();
+
+            Check(PocketGameProgramAssetValidator.DeclaresOwnershipGuard(typeof(PocketCounterGame)) &&
+                !PocketGameProgramAssetValidator.DeclaresOwnershipGuard(typeof(PocketGameUi)), "ownership guard type check");
+
+            pool = UnityEngine.Object.FindObjectOfType<PocketGameTerminalPool>(true);
+            var gameProxy = UdonSharpEditorUtility.GetProxyBehaviour(pool.terminalSessions[0].gameEvents) as PocketGameBehaviour;
+            gameProxy.terminalSession = null;
+            UdonSharpEditorUtility.CopyProxyToUdon(gameProxy);
+            var wiringMessage = CaptureValidationFailure();
+            Check(wiringMessage.Contains("terminalSession") && wiringMessage.Contains("Slot 0"), "missing base terminalSession reports slot wiring");
+            PocketGameInstaller.InstallIntoCurrentScene();
 
             Debug.Log("PocketGameValidatorFaultDriver PASS");
             EditorApplication.Exit(0);

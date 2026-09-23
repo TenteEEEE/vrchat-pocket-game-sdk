@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.4.0] - 2026-09-23
+
+### Added
+
+- Optional `PocketGameBehaviour` base with terminal event hooks and claimant/input helpers.
+- Scene validation for game ownership forwarding and `PocketGameBehaviour` session/UI wiring.
+
+### Changed
+
+- The counter sample now uses `PocketGameBehaviour`. Scene validation fails when no behavior on a game object forwards `OnOwnershipRequest`; existing games must add the forward or derive from the base.
+
 ## [0.3.2] - 2026-09-23
 
 ### Added

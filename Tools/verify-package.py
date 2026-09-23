@@ -131,6 +131,7 @@ def check_runtime_boundary() -> None:
                 fail(f"core has forbidden game/sample dependency '{word}': {package_relative(path)}")
 
     sample = PACKAGE_ROOT / "Runtime" / "Sample" / "PocketCounterGame.cs"
+    game_base = PACKAGE_ROOT / "Runtime" / "Core" / "PocketGameBehaviour.cs"
     required_events = (
         "PocketTerminal_OnClaimed",
         "PocketTerminal_OnReleased",
@@ -142,9 +143,15 @@ def check_runtime_boundary() -> None:
         fail("counter sample is missing")
     else:
         source = text(sample)
+        if not re.search(r"class\s+PocketCounterGame\s*:\s*PocketGameBehaviour\b", source):
+            fail("counter sample does not derive from PocketGameBehaviour")
+    if not game_base.is_file():
+        fail("PocketGameBehaviour is missing")
+    else:
+        source = text(game_base)
         for event in required_events:
             if event not in source:
-                fail(f"counter sample does not implement {event}")
+                fail(f"PocketGameBehaviour does not forward {event}")
 
 
 def check_release_files() -> None:
