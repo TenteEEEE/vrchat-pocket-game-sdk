@@ -1,7 +1,7 @@
 {
   "name": "com.tentee.vrc-pocket-game",
   "displayName": "VRChat Pocket Game SDK",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "unity": "2022.3",
   "author": {
     "name": "TenteEEEE",
