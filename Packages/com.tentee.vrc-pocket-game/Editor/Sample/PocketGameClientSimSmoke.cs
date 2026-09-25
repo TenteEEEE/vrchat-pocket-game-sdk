@@ -35,6 +35,9 @@ namespace VrcPocketGame.Editor
         private static GameObject raceRoot;
         private static double raceStart;
         private static Vector3 stalePosition;
+        private static double denyStart;
+        private static bool denyRoots;
+        private static Action<VRCPlayerApi, GameObject> denyHook;
 
         static PocketGameClientSimSmoke()
         {
@@ -302,7 +305,40 @@ namespace VrcPocketGame.Editor
                     float headRecallDistance = Vector3.Distance(root.transform.position, HeadRecallPosition());
                     Check(kioskDistance <= .25f, "kiosk reuse places terminal at kiosk front");
                     Check(headRecallDistance > .5f, "kiosk reuse does not use head-relative recall position");
-                    Debug.Log("[Pocket Game SDK] ClientSim smoke PASS: local UI/persistence checks, simulated remote guards/cleanup, first-claim placement, stale-pose recovery, and kiosk-reuse placement.");
+                    FindIn(root, "PocketGameTerminalSession").SendCustomEvent("PocketTerminal_RequestReturn");
+                    Advance(15, 1);
+                }
+                else if (phase == 15)
+                {
+                    Debug.Log("[Pocket Game SDK] Smoke phase 15: terminal ownership refused for 5 s.");
+                    Check(!root.activeSelf, "terminal stowed before the refused claim");
+                    SpawnRemotePlayer();
+                    var roots = (GameObject[])pool.GetProgramVariable("terminalRoots");
+                    // Registered after ClientSim's handler, so a refused request hands the root straight back, as a
+                    // previous owner with a late claim table would in a busy instance.
+                    denyHook = (player, obj) => { if (denyRoots && player != null && player.isLocal && roots.Contains(obj)) ClientSimSetOwner(remote, obj); };
+                    Networking._SetOwner += denyHook;
+                    denyRoots = true;
+                    denyStart = EditorApplication.timeSinceStartup;
+                    pool.Interact();
+                    Advance(16, 5);
+                }
+                else if (phase == 16)
+                {
+                    denyRoots = false;
+                    int slot = Array.FindIndex((int[])pool.GetProgramVariable("claimedPlayerIds"), id => id == Networking.LocalPlayer.playerId);
+                    Check(slot >= 0, "claim survives 5 s of refused terminal ownership (status: " + PoolStatus() + ")");
+                    root = ((GameObject[])pool.GetProgramVariable("terminalRoots"))[slot];
+                    Advance(17, 4);
+                }
+                else if (phase == 17)
+                {
+                    var claimSession = FindIn(root, "PocketGameTerminalSession");
+                    Check(Networking.IsOwner(root) && Networking.IsOwner(claimSession.gameObject), "claimant owns the terminal once ownership is granted");
+                    Check((int)claimSession.GetProgramVariable("assignedPlayerId") == Networking.LocalPlayer.playerId, "session accepted after the refusal ends");
+                    Networking._SetOwner -= denyHook; denyHook = null;
+                    RemoveRemotePlayer(remote);
+                    Debug.Log("[Pocket Game SDK] ClientSim smoke PASS: local UI/persistence checks, simulated remote guards/cleanup, first-claim placement, stale-pose recovery, kiosk-reuse placement, and refused-ownership recovery.");
                     SessionState.SetInt(Result, 0);
                     EditorApplication.ExitPlaymode();
                 }
@@ -310,6 +346,7 @@ namespace VrcPocketGame.Editor
             catch (Exception error)
             {
                 Debug.LogError("[Pocket Game SDK] ClientSim smoke FAIL at phase " + phase + ": " + error);
+                if (denyHook != null) { Networking._SetOwner -= denyHook; denyHook = null; }
                 SessionState.SetInt(Result, 1);
                 if (EditorApplication.isPlaying) EditorApplication.ExitPlaymode();
                 else Finish();
@@ -346,6 +383,12 @@ namespace VrcPocketGame.Editor
                 (args[0].Item1, (object)requester), (args[1].Item1, (object)owner));
             Check(invoked, "compiled OnOwnershipRequest event found");
             return (bool)target.GetProgramVariable("__returnValue");
+        }
+        private static string PoolStatus() { var text = (TMPro.TMP_Text)pool.GetProgramVariable("statusText"); return text == null ? "" : text.text; }
+        private static void ClientSimSetOwner(VRCPlayerApi player, GameObject obj)
+        {
+            var type = AppDomain.CurrentDomain.GetAssemblies().Select(a => a.GetType("VRC.SDK3.ClientSim.ClientSimPlayerManager")).First(t => t != null);
+            type.GetMethod("SetOwner", BindingFlags.Public | BindingFlags.Static).Invoke(null, new object[] { player, obj });
         }
         private static void SpawnRemotePlayer()
         {
