@@ -2,6 +2,8 @@
 
 **Version scope:** The latest recorded Unity/ClientSim run below is for 0.3.2. Version 0.4.0 added `PocketGameBehaviour` and stricter ownership-forward validation; `main` adds more UI APIs and canvas sorting. The table below still summarizes the 0.3.2 run. The 2026-09-25 entry records the ClientSim and MultiSim smoke runs of PR #18 (`3de53aa`) with the multiplayer test changes; the validator-fault driver and rendered-screen review in the table were not repeated then.
 
+On 2026-09-25, the claim-verification backoff fix was checked the same way. With the fix, the Tier 0 smoke passed, including a claim whose terminal ownership was refused for 5 s (refusal simulated by handing the root back to a remote player from a `Networking._SetOwner` handler registered after ClientSim's). The pool before the fix released that claim about 1.9 s after it was written ("Could not prepare terminal"), so the same smoke failed. A fresh `InstallAndValidateBatch` passed.
+
 On 2026-09-25, PR #18 (`3de53aa`, kiosk placement after ownership settles) plus the multiplayer test changes was run in disposable Unity 2022.3.22f1 / Worlds 3.10.5 projects:
 
 | Check | #18 applied | Control: pool before #18 (`f543adb`) |

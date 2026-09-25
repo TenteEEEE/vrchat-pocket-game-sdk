@@ -4,6 +4,7 @@
 
 ### Fixed
 
+- Claim verification now backs off on its own retry counter and keeps asking for terminal ownership for about 18 s. Before, its retries used the kiosk-claim counter, which is 0 by then, so verification gave up about 1.9 s after the claim and released it with "Could not prepare terminal" whenever the previous owner was slow to approve ownership, as in busy instances.
 - Kiosk calls now keep newly claimed terminals in front of the kiosk while ownership verification completes, and recalling an existing terminal from the kiosk places it there instead of relative to the player's head.
 
 ### Added
@@ -18,7 +19,7 @@
 
 ### Tests
 
-- The ClientSim smoke now checks a simulated remote player's terminal audience and input guard, `OnOwnershipRequest` decisions, departure cleanup, first-claim kiosk placement, recovery from a stale previous-owner pose, and kiosk reuse.
+- The ClientSim smoke now checks a simulated remote player's terminal audience and input guard, `OnOwnershipRequest` decisions, departure cleanup, first-claim kiosk placement, recovery from a stale previous-owner pose, kiosk reuse, and recovery after terminal ownership is refused for 5 s.
 - Added an optional two-editor smoke and a run script under `Tests~/MultiSim` for VRChat MultiSim and ParrelSync validation projects. It is not a package dependency.
 
 
