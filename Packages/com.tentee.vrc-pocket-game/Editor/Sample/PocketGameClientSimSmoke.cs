@@ -32,6 +32,9 @@ namespace VrcPocketGame.Editor
         private static int remoteSlot;
         private static int remoteGeneration;
         private static int remoteCount;
+        private static GameObject raceRoot;
+        private static double raceStart;
+        private static Vector3 stalePosition;
 
         static PocketGameClientSimSmoke()
         {
@@ -234,27 +237,72 @@ namespace VrcPocketGame.Editor
                 }
                 else if (phase == 8)
                 {
-                    Debug.Log("[Pocket Game SDK] Smoke phase 8: kiosk reuse placement.");
-                    // At the default spawn the head-relative recall point lands on the kiosk front, so step aside first.
-                    Networking.LocalPlayer.TeleportTo(KioskPosition() + Vector3.left * 3f, Quaternion.LookRotation(Vector3.left));
+                    Debug.Log("[Pocket Game SDK] Smoke phase 8: stale previous-owner pose on a new claim.");
+                    session.SendCustomEvent("PocketTerminal_RequestReturn");
                     Advance(9, 1);
                 }
                 else if (phase == 9)
+                {
+                    Check(!root.activeSelf, "terminal stowed before the stale-pose claim");
+                    SpawnRemotePlayer();
+                    pool.Interact();
+                    raceRoot = null;
+                    Advance(10, 0);
+                }
+                else if (phase == 10)
+                {
+                    // Stands in for PR #18's race: the previous owner keeps the root and its ObjectSync keeps
+                    // sending the old pose until the claimant's VerifyClaim (0.7 s after the claim) takes it back.
+                    if (raceRoot == null)
+                    {
+                        var roots = (GameObject[])pool.GetProgramVariable("terminalRoots");
+                        int slot = Array.FindIndex((int[])pool.GetProgramVariable("claimedPlayerIds"), id => id == Networking.LocalPlayer.playerId);
+                        if (slot < 0 || !roots[slot].activeSelf) return;
+                        raceRoot = roots[slot];
+                        raceStart = EditorApplication.timeSinceStartup;
+                        stalePosition = KioskPosition() + Vector3.right * 5f;
+                    }
+                    if (EditorApplication.timeSinceStartup - raceStart < .4)
+                    {
+                        Networking.SetOwner(remote, raceRoot);
+                        raceRoot.transform.position = stalePosition;
+                        return;
+                    }
+                    Advance(11, 3);
+                }
+                else if (phase == 11)
+                {
+                    float kioskDistance = KioskDistance(raceRoot);
+                    Check(kioskDistance <= .25f, "new claim ends at kiosk front despite a stale previous-owner pose (distance=" + kioskDistance.ToString("F2") + "m)");
+                    Check(Vector3.Distance(raceRoot.transform.position, stalePosition) > 2f, "new claim does not keep the stale previous-owner pose");
+                    Check(Networking.IsOwner(raceRoot), "claimant took the terminal root back");
+                    RemoveRemotePlayer(remote);
+                    root = raceRoot;
+                    Advance(12, 1);
+                }
+                else if (phase == 12)
+                {
+                    Debug.Log("[Pocket Game SDK] Smoke phase 12: kiosk reuse placement.");
+                    // At the default spawn the head-relative recall point lands on the kiosk front, so step aside first.
+                    Networking.LocalPlayer.TeleportTo(KioskPosition() + Vector3.left * 3f, Quaternion.LookRotation(Vector3.left));
+                    Advance(13, 1);
+                }
+                else if (phase == 13)
                 {
                     Check(Vector3.Distance(HeadRecallPosition(), KioskPosition()) > 1f, "head-relative recall point is distinct from the kiosk front");
                     root.transform.position = KioskPosition() + Vector3.right * 5f;
                     var objectSync = root.GetComponent<VRCObjectSync>();
                     if (objectSync != null) objectSync.FlagDiscontinuity();
                     pool.Interact();
-                    Advance(10, 1.5);
+                    Advance(14, 1.5);
                 }
-                else if (phase == 10)
+                else if (phase == 14)
                 {
                     float kioskDistance = KioskDistance(root);
                     float headRecallDistance = Vector3.Distance(root.transform.position, HeadRecallPosition());
                     Check(kioskDistance <= .25f, "kiosk reuse places terminal at kiosk front");
                     Check(headRecallDistance > .5f, "kiosk reuse does not use head-relative recall position");
-                    Debug.Log("[Pocket Game SDK] ClientSim smoke PASS: local UI/persistence checks, simulated remote guards/cleanup, first-claim placement, and kiosk-reuse placement.");
+                    Debug.Log("[Pocket Game SDK] ClientSim smoke PASS: local UI/persistence checks, simulated remote guards/cleanup, first-claim placement, stale-pose recovery, and kiosk-reuse placement.");
                     SessionState.SetInt(Result, 0);
                     EditorApplication.ExitPlaymode();
                 }
