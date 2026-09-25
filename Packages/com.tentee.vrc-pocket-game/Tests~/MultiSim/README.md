@@ -28,6 +28,8 @@ The `Packages` junction means SDK or dependency edits reach the clone immediatel
 
 ## Run order
 
+`Run-MultiSimSmoke.ps1 -Project <project>` runs every step in this section and prints both results. The manual steps follow.
+
 Use PowerShell `Start-Process` (not Git Bash) to launch separate Unity processes. Do not add `-quit` to either play run; the driver exits each process after Play Mode finishes. Adjust the Unity executable and project paths as needed.
 
 ```powershell
