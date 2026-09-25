@@ -11,7 +11,7 @@ using VRC.Udon;
 
 namespace VrcPocketGame.Editor
 {
-    /// <summary>Runs real Udon in ClientSim. This is a local smoke test, not a multiplayer test.</summary>
+    /// <summary>Runs real Udon in ClientSim, including Tier 0 simulated-remote checks in one editor process.</summary>
     [InitializeOnLoad]
     public static class PocketGameClientSimSmoke
     {
@@ -26,6 +26,12 @@ namespace VrcPocketGame.Editor
         private static UdonBehaviour game;
         private static UdonBehaviour ui;
         private static GameObject root;
+        private static VRCPlayerApi remote;
+        private static UdonBehaviour remoteSession;
+        private static GameObject remoteRoot;
+        private static int remoteSlot;
+        private static int remoteGeneration;
+        private static int remoteCount;
 
         static PocketGameClientSimSmoke()
         {
@@ -65,7 +71,7 @@ namespace VrcPocketGame.Editor
             EditorSceneManager.SaveScene(UnityEngine.SceneManagement.SceneManager.GetActiveScene(), PocketGameInstaller.ScenePath);
             SessionState.SetBool(Running, true);
             SessionState.SetInt(Result, 1);
-            SessionState.SetFloat(Deadline, (float)EditorApplication.timeSinceStartup + 100);
+            SessionState.SetFloat(Deadline, (float)EditorApplication.timeSinceStartup + 140);
             ConfigureClientSim();
             EditorApplication.update -= Tick;
             EditorApplication.update += Tick;
@@ -112,6 +118,7 @@ namespace VrcPocketGame.Editor
                     game = FindIn(root, "PocketCounterGame");
                     ui = FindIn(root, "PocketGameUi");
                     Check((int)session.GetProgramVariable("assignedPlayerId") == Networking.LocalPlayer.playerId, "claimant assigned");
+                    Check(KioskDistance(root) <= .25f, "first claim places terminal at kiosk front");
                     initialCount = Count();
                     game.SendCustomEvent("OwnerAddOne");
                     Check(Count() == initialCount + 1, "owner action updates count");
@@ -160,9 +167,95 @@ namespace VrcPocketGame.Editor
                     ui.SendCustomEvent("ShowConfirm");
                     game.SendCustomEvent("ConfirmReset");
                     Check(Count() == 0, "confirmed reset updates game");
-                    Debug.Log("[Pocket Game SDK] ClientSim smoke PASS: claim/action/retry/drawers/modal/scale/stow/restore/reset.");
+                    Advance(5, 0);
+                }
+                else if (phase == 5)
+                {
+                    Debug.Log("[Pocket Game SDK] Smoke phase 5: simulated remote claim and audience.");
+                    SpawnRemotePlayer();
+                    var roots = (GameObject[])pool.GetProgramVariable("terminalRoots");
+                    var claimed = (int[])pool.GetProgramVariable("claimedPlayerIds");
+                    var generations = (int[])pool.GetProgramVariable("claimGenerations");
+                    remoteSlot = Array.FindIndex(claimed, id => id < 0);
+                    Check(remoteSlot >= 0 && remoteSlot != (int)session.GetProgramVariable("slotIndex"), "remote receives a distinct free slot");
+                    var objectPool = (VRCObjectPool)pool.GetProgramVariable("pool");
+                    remoteRoot = objectPool.TryToSpawn();
+                    Check(remoteRoot == roots[remoteSlot], "remote slot root borrowed from pool");
+                    remoteGeneration = generations[remoteSlot] + 1;
+                    claimed[remoteSlot] = remote.playerId;
+                    generations[remoteSlot] = remoteGeneration;
+                    remoteSession = FindIn(remoteRoot, "PocketGameTerminalSession");
+                    var remoteGame = FindIn(remoteRoot, "PocketCounterGame");
+                    Networking.SetOwner(remote, remoteRoot);
+                    Networking.SetOwner(remote, remoteSession.gameObject);
+                    var remoteEvents = (UdonBehaviour)remoteSession.GetProgramVariable("gameEvents");
+                    if (remoteEvents != null) Networking.SetOwner(remote, remoteEvents.gameObject);
+                    remoteSession.SetProgramVariable("assignedPlayerId", remote.playerId);
+                    remoteSession.SetProgramVariable("sessionGeneration", remoteGeneration);
+                    remoteSession.RunEvent("_onDeserialization");
+                    Check(!Networking.IsOwner(remoteSession.gameObject) && !Networking.IsOwner(remoteRoot), "remote session is not local claimant");
+                    Check(!((VRC_Pickup)remoteSession.GetProgramVariable("pickup")).pickupable, "remote pickup is disabled locally");
+                    var claimantOnly = (GameObject[])remoteSession.GetProgramVariable("claimantOnlyObjects") ?? new GameObject[0];
+                    var spectators = (GameObject[])remoteSession.GetProgramVariable("spectatorObjects") ?? new GameObject[0];
+                    // The counter sample wires no audience objects; an empty list must not read as a pass.
+                    if (claimantOnly.Length + spectators.Length == 0) Debug.Log("[Pocket Game SDK] Smoke skip: no audience objects wired in this scene.");
+                    Check(!claimantOnly.Any(o => o.activeSelf), "claimant-only objects hidden");
+                    Check(spectators.All(o => o.activeSelf), "spectator objects shown");
+                    remoteCount = (int)remoteGame.GetProgramVariable("sharedCount");
+                    remoteGame.SendCustomEvent("OwnerAddOne");
+                    remoteSession.SendCustomEvent("PocketTerminal_OnUseDown");
+                    Check((int)remoteGame.GetProgramVariable("sharedCount") == remoteCount, "local actions do not change remote game count");
+                    Advance(6, 0);
+                }
+                else if (phase == 6)
+                {
+                    Debug.Log("[Pocket Game SDK] Smoke phase 6: ownership guard decisions.");
+                    Check(OwnershipRequest(remoteSession, Networking.LocalPlayer, Networking.LocalPlayer) == false, "remote claim denies local ownership request");
+                    Check(OwnershipRequest(remoteSession, remote, remote), "remote claim permits claimant ownership request");
+                    Check(root.activeSelf && (int)session.GetProgramVariable("assignedPlayerId") == Networking.LocalPlayer.playerId && Networking.IsOwner(session.gameObject), "local claim remains on its own terminal");
+                    Advance(7, 0);
+                }
+                else if (phase == 7)
+                {
+                    Debug.Log("[Pocket Game SDK] Smoke phase 7: remote departure cleanup.");
+                    RemoveRemotePlayer(remote);
+                    Networking.SetOwner(Networking.LocalPlayer, pool.gameObject);
+                    pool.SendCustomEvent("CleanupMissingClaims");
+                    var claims = (int[])pool.GetProgramVariable("claimedPlayerIds");
+                    var generations = (int[])pool.GetProgramVariable("claimGenerations");
+                    Check(claims[remoteSlot] == -1 && generations[remoteSlot] > remoteGeneration, "missing remote claim cleared and generation advanced");
+                    Check(!remoteRoot.activeSelf, "remote terminal returned to pool");
+                    // Both terminals were in use until now; the freed slot checks the unclaimed-terminal rule.
+                    SpawnRemotePlayer();
+                    Check(OwnershipRequest(remoteSession, Networking.LocalPlayer, Networking.LocalPlayer), "pool owner may request ownership of free slot");
+                    Check(!OwnershipRequest(remoteSession, remote, Networking.LocalPlayer), "non-pool owner denied ownership of free slot");
+                    RemoveRemotePlayer(remote);
+                    Advance(8, 0);
+                }
+                else if (phase == 8)
+                {
+                    Debug.Log("[Pocket Game SDK] Smoke phase 8: kiosk reuse placement.");
+                    // At the default spawn the head-relative recall point lands on the kiosk front, so step aside first.
+                    Networking.LocalPlayer.TeleportTo(KioskPosition() + Vector3.left * 3f, Quaternion.LookRotation(Vector3.left));
+                    Advance(9, 1);
+                }
+                else if (phase == 9)
+                {
+                    Check(Vector3.Distance(HeadRecallPosition(), KioskPosition()) > 1f, "head-relative recall point is distinct from the kiosk front");
+                    root.transform.position = KioskPosition() + Vector3.right * 5f;
+                    var objectSync = root.GetComponent<VRCObjectSync>();
+                    if (objectSync != null) objectSync.FlagDiscontinuity();
+                    pool.Interact();
+                    Advance(10, 1.5);
+                }
+                else if (phase == 10)
+                {
+                    float kioskDistance = KioskDistance(root);
+                    float headRecallDistance = Vector3.Distance(root.transform.position, HeadRecallPosition());
+                    Check(kioskDistance <= .25f, "kiosk reuse places terminal at kiosk front");
+                    Check(headRecallDistance > .5f, "kiosk reuse does not use head-relative recall position");
+                    Debug.Log("[Pocket Game SDK] ClientSim smoke PASS: local UI/persistence checks, simulated remote guards/cleanup, first-claim placement, and kiosk-reuse placement.");
                     SessionState.SetInt(Result, 0);
-                    phase = 5;
                     EditorApplication.ExitPlaymode();
                 }
             }
@@ -183,6 +276,47 @@ namespace VrcPocketGame.Editor
             EditorApplication.Exit(SessionState.GetInt(Result, 1));
         }
         private static int Count() { return (int)game.GetProgramVariable("sharedCount"); }
+        private static Vector3 KioskPosition() => pool.transform.position - pool.transform.forward * (float)pool.GetProgramVariable("spawnDistance");
+        // Builder makes the root kinematic with gravity off; 0.25 m allows minor ClientSim/ObjectSync pose error while separating the 5 m test offset.
+        private static float KioskDistance(GameObject target) => Vector3.Distance(target.transform.position, KioskPosition());
+        private static Vector3 HeadRecallPosition()
+        {
+            var head = Networking.LocalPlayer.GetTrackingData(VRCPlayerApi.TrackingDataType.Head);
+            var forward = Vector3.ProjectOnPlane(head.rotation * Vector3.forward, Vector3.up).normalized;
+            if (forward.sqrMagnitude < .1f) forward = Vector3.forward;
+            return head.position + forward * .7f - Vector3.up * .18f;
+        }
+        private static bool OwnershipRequest(UdonBehaviour target, VRCPlayerApi requester, VRCPlayerApi owner)
+        {
+            // UdonSharp names event parameters after the Udon node outputs, so read them from its compiler.
+            var udonInterface = AppDomain.CurrentDomain.GetAssemblies().Select(a => a.GetType("UdonSharp.Compiler.Udon.CompilerUdonInterface")).FirstOrDefault(t => t != null);
+            Check(udonInterface != null, "UdonSharp event argument table available");
+            var args = ((System.Collections.IEnumerable)udonInterface.GetMethod("GetUdonEventArgs", BindingFlags.Public | BindingFlags.Static)
+                .Invoke(null, new object[] { "OnOwnershipRequest" })).Cast<ValueTuple<string, Type>>().ToArray();
+            Check(args.Length == 2, "OnOwnershipRequest has two Udon parameters");
+            bool invoked = target.RunEventAdvanced("_onOwnershipRequest", false, false,
+                (args[0].Item1, (object)requester), (args[1].Item1, (object)owner));
+            Check(invoked, "compiled OnOwnershipRequest event found");
+            return (bool)target.GetProgramVariable("__returnValue");
+        }
+        private static void SpawnRemotePlayer()
+        {
+            var type = AppDomain.CurrentDomain.GetAssemblies().Select(a => a.GetType("VRC.SDK3.ClientSim.ClientSimMain")).FirstOrDefault(t => t != null);
+            Check(type != null, "ClientSimMain available");
+            type.GetMethod("SpawnRemotePlayer", BindingFlags.Public | BindingFlags.Static).Invoke(null, new object[] { "Pocket Smoke Remote" });
+            remote = null;
+            for (int i = 0; i < 100 && remote == null; i++)
+            {
+                foreach (var player in VRCPlayerApi.AllPlayers)
+                    if (player != null && !player.isLocal) { remote = player; break; }
+            }
+            Check(remote != null, "remote player spawned");
+        }
+        private static void RemoveRemotePlayer(VRCPlayerApi player)
+        {
+            var type = AppDomain.CurrentDomain.GetAssemblies().Select(a => a.GetType("VRC.SDK3.ClientSim.ClientSimMain")).First(t => t != null);
+            type.GetMethod("RemovePlayer", BindingFlags.Public | BindingFlags.Static).Invoke(null, new object[] { player });
+        }
         private static void Advance(int value, double delay)
         {
             phase = value;
