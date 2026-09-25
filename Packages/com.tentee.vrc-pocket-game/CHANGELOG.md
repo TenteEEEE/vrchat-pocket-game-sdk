@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Fixed
+
+- Kiosk calls now keep newly claimed terminals in front of the kiosk while ownership verification completes, and recalling an existing terminal from the kiosk places it there instead of relative to the player's head.
+
 ### Added
 
 - PocketGameUi panel controls, indexed confirmation panels, help-page queries and notifications, optional extra drawers, and arbitrary scale multipliers.

@@ -30,6 +30,8 @@ namespace VrcPocketGame
         private int _verifyAttempts;
         private int _verifyGeneration;
         private bool _verifyConfirmed;
+        private int _pendingPlacementSlot = -1;
+        private int _pendingPlacementGeneration;
         private const int MaxRetries = 8;
 
         private void Start()
@@ -58,7 +60,7 @@ namespace VrcPocketGame
             VRCPlayerApi local = Networking.LocalPlayer;
             if (local == null) return;
             int existing = FindClaim(local.playerId);
-            if (existing >= 0) { RestoreTerminalOwnership(existing); Recall(existing); BeginVerify(existing); return; }
+            if (existing >= 0) { RestoreTerminalOwnership(existing); RecallFromKiosk(existing); BeginVerify(existing); return; }
             if (_pendingClaim || _pendingReturn >= 0) return;
             _pendingClaim = true; _claimAttempts = 0;
             Networking.SetOwner(local, gameObject);
@@ -79,7 +81,7 @@ namespace VrcPocketGame
             EnsureTables();
             CleanupMissingClaims();
             int existing = FindClaim(local.playerId);
-            if (existing >= 0) { _pendingClaim = false; Recall(existing); BeginVerify(existing); return; }
+            if (existing >= 0) { _pendingClaim = false; RestoreTerminalOwnership(existing); RecallFromKiosk(existing); BeginVerify(existing); return; }
             GameObject root = pool == null ? null : pool.TryToSpawn();
             int index = FindRoot(root);
             if (root == null || !IsSlot(index) || terminalSessions[index] == null) { if (root != null) pool.Return(root); _pendingClaim = false; SetStatus("All terminals are in use."); return; }
@@ -89,7 +91,8 @@ namespace VrcPocketGame
             Networking.SetOwner(local, root);
             Networking.SetOwner(local, terminalSessions[index].gameObject);
             if (terminalSessions[index].gameEvents != null) Networking.SetOwner(local, terminalSessions[index].gameEvents.gameObject);
-            root.transform.SetPositionAndRotation(transform.position - transform.forward * spawnDistance, transform.rotation);
+            SetPendingKioskPlacement(index);
+            PlaceAtKiosk(index);
             _pendingClaim = false;
             SetStatus("Game ready.");
             BeginVerify(index);
@@ -108,16 +111,16 @@ namespace VrcPocketGame
         public void VerifyClaim()
         {
             VRCPlayerApi local = Networking.LocalPlayer;
-            if (local == null) return;
+            if (local == null) { EndVerify(_verifySlot, _verifyGeneration); return; }
             int index = _verifySlot;
             if (index < 0) return;
             if (!HasClaimSlot(index) || claimedPlayerIds[index] != local.playerId || claimGenerations[index] != _verifyGeneration || terminalRoots[index] == null || !terminalRoots[index].activeInHierarchy)
             {
-                _verifySlot = -1;
+                EndVerify(index, _verifyGeneration);
                 return;
             }
             PocketGameTerminalSession state = terminalSessions[index];
-            if (state == null) return;
+            if (state == null) { EndVerify(index, _verifyGeneration); return; }
             Networking.SetOwner(local, terminalRoots[index]); Networking.SetOwner(local, state.gameObject); if(state.gameEvents!=null) Networking.SetOwner(local,state.gameEvents.gameObject);
             if (!Networking.IsOwner(terminalRoots[index]) || !Networking.IsOwner(state.gameObject) || (state.gameEvents != null && !Networking.IsOwner(state.gameEvents.gameObject)))
             {
@@ -132,16 +135,17 @@ namespace VrcPocketGame
                         Sync();
                         if (pool != null) pool.Return(terminalRoots[index]);
                     }
-                    _verifySlot = -1;
+                    EndVerify(index, _verifyGeneration);
                     SetStatus("Could not prepare terminal; use the kiosk to retry.");
                 }
                 return;
             }
+            if (_pendingPlacementSlot == index && _pendingPlacementGeneration == _verifyGeneration) PlaceAtKiosk(index);
             state.assignedPlayerId=local.playerId; state.sessionGeneration=claimGenerations[index]; state.PocketTerminal_OnClaimed();
             if (!state.HasAcceptedSession())
             {
                 if (_verifyAttempts++ < MaxRetries) SendCustomEventDelayedSeconds(nameof(VerifyClaim), .5f);
-                else _verifySlot = -1;
+                else EndVerify(index, _verifyGeneration);
                 return;
             }
             if (!_verifyConfirmed)
@@ -150,7 +154,7 @@ namespace VrcPocketGame
                 SendCustomEventDelayedSeconds(nameof(VerifyClaim), .8f);
                 return;
             }
-            _verifySlot = -1;
+            EndVerify(index, _verifyGeneration);
         }
 
         public void RequestReturn(int slotIndex)
@@ -219,7 +223,44 @@ namespace VrcPocketGame
             terminalRoots[index].transform.SetPositionAndRotation(head.position + forward * .7f - Vector3.up * .18f, Quaternion.LookRotation(forward, Vector3.up));
             VRCObjectSync objectSync = terminalRoots[index].GetComponent<VRCObjectSync>();
             if (objectSync != null) objectSync.FlagDiscontinuity();
-            terminalSessions[index].sessionGeneration=claimGenerations[index]; terminalSessions[index].PocketTerminal_OnRecalled(); SetStatus("Game recalled.");
+            NotifyRecalled(index);
+        }
+        private void RecallFromKiosk(int index)
+        {
+            if (!HasClaimSlot(index) || terminalSessions[index] == null || !terminalSessions[index].IsLocalClaimant()) return;
+            PocketGameTerminalSession session = terminalSessions[index];
+            if (session.ui != null && session.ui.BlocksGameInput()) return;
+            VRCPlayerApi local = Networking.LocalPlayer;
+            if (local == null) return;
+            if (session.pickup != null && session.pickup.IsHeld && session.pickup.currentPlayer != null && session.pickup.currentPlayer.isLocal) session.pickup.Drop();
+            SetPendingKioskPlacement(index);
+            PlaceAtKiosk(index);
+            NotifyRecalled(index);
+        }
+        private void NotifyRecalled(int index)
+        {
+            PocketGameTerminalSession session = terminalSessions[index];
+            session.sessionGeneration=claimGenerations[index]; session.PocketTerminal_OnRecalled(); SetStatus("Game recalled.");
+        }
+        private void SetPendingKioskPlacement(int index)
+        {
+            _pendingPlacementSlot = index;
+            _pendingPlacementGeneration = GetClaimGeneration(index);
+        }
+        private void PlaceAtKiosk(int index)
+        {
+            if (!HasClaimSlot(index) || terminalRoots[index] == null || terminalSessions[index] == null) return;
+            VRC_Pickup pickup = terminalSessions[index].pickup;
+            if (pickup != null && pickup.IsHeld) return;
+            GameObject root = terminalRoots[index];
+            root.transform.SetPositionAndRotation(transform.position - transform.forward * spawnDistance, transform.rotation);
+            VRCObjectSync objectSync = root.GetComponent<VRCObjectSync>();
+            if (objectSync != null) objectSync.FlagDiscontinuity();
+        }
+        private void EndVerify(int index, int generation)
+        {
+            if (_pendingPlacementSlot == index && _pendingPlacementGeneration == generation) { _pendingPlacementSlot = -1; _pendingPlacementGeneration = 0; }
+            _verifySlot = -1;
         }
         public override void OnPostSerialization(SerializationResult result) { if (!result.success) { _resend = true; SendCustomEventDelayedSeconds(nameof(RetrySync), .35f); } else _resend = false; }
         public void RetrySync() { if (_resend && Networking.IsOwner(gameObject)) RequestSerialization(); }
