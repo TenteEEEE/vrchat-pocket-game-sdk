@@ -33,6 +33,12 @@ namespace VrcPocketGame
         private int _pendingPlacementSlot = -1;
         private int _pendingPlacementGeneration;
         private const int MaxRetries = 8;
+        // Ownership approval can take seconds in a busy instance (e.g. the previous owner's claim table is late),
+        // so verification backs off on its own counter: .7 s initial wait plus 4.5 s of retries (.25 s steps, capped at 1 s).
+        private const int MaxVerifyRetries = 6;
+        private const string PreparingStatus = "Preparing your game…";
+        private const string PrepareFailedStatus = "Could not prepare terminal; use the kiosk to retry.";
+        private bool _announceReady;
 
         private void Start()
         {
@@ -94,7 +100,9 @@ namespace VrcPocketGame
             SetPendingKioskPlacement(index);
             PlaceAtKiosk(index);
             _pendingClaim = false;
-            SetStatus("Game ready.");
+            // "Game ready." waits until verification accepts the session; until then the terminal is not usable.
+            _announceReady = true;
+            SetStatus(PreparingStatus);
             BeginVerify(index);
         }
 
@@ -117,14 +125,15 @@ namespace VrcPocketGame
             if (!HasClaimSlot(index) || claimedPlayerIds[index] != local.playerId || claimGenerations[index] != _verifyGeneration || terminalRoots[index] == null || !terminalRoots[index].activeInHierarchy)
             {
                 EndVerify(index, _verifyGeneration);
+                AnnouncePrepareFailed();
                 return;
             }
             PocketGameTerminalSession state = terminalSessions[index];
-            if (state == null) { EndVerify(index, _verifyGeneration); return; }
+            if (state == null) { EndVerify(index, _verifyGeneration); AnnouncePrepareFailed(); return; }
             Networking.SetOwner(local, terminalRoots[index]); Networking.SetOwner(local, state.gameObject); if(state.gameEvents!=null) Networking.SetOwner(local,state.gameEvents.gameObject);
             if (!Networking.IsOwner(terminalRoots[index]) || !Networking.IsOwner(state.gameObject) || (state.gameEvents != null && !Networking.IsOwner(state.gameEvents.gameObject)))
             {
-                if (_verifyAttempts++ < MaxRetries) SendCustomEventDelayedSeconds(nameof(VerifyClaim), RetryDelay());
+                if (_verifyAttempts++ < MaxVerifyRetries) SendCustomEventDelayedSeconds(nameof(VerifyClaim), VerifyRetryDelay());
                 else
                 {
                     if (Networking.IsOwner(gameObject))
@@ -136,7 +145,8 @@ namespace VrcPocketGame
                         if (pool != null) pool.Return(terminalRoots[index]);
                     }
                     EndVerify(index, _verifyGeneration);
-                    SetStatus("Could not prepare terminal; use the kiosk to retry.");
+                    _announceReady = false;
+                    SetStatus(PrepareFailedStatus);
                 }
                 return;
             }
@@ -144,10 +154,11 @@ namespace VrcPocketGame
             state.assignedPlayerId=local.playerId; state.sessionGeneration=claimGenerations[index]; state.PocketTerminal_OnClaimed();
             if (!state.HasAcceptedSession())
             {
-                if (_verifyAttempts++ < MaxRetries) SendCustomEventDelayedSeconds(nameof(VerifyClaim), .5f);
-                else EndVerify(index, _verifyGeneration);
+                if (_verifyAttempts++ < MaxVerifyRetries) SendCustomEventDelayedSeconds(nameof(VerifyClaim), VerifyRetryDelay());
+                else { EndVerify(index, _verifyGeneration); AnnouncePrepareFailed(); }
                 return;
             }
+            if (_announceReady) { _announceReady = false; SetStatus("Game ready."); }
             if (!_verifyConfirmed)
             {
                 _verifyConfirmed = true;
@@ -271,6 +282,8 @@ namespace VrcPocketGame
         private int FindRoot(GameObject root) { if (terminalRoots == null || root == null) return -1; for(int i=0;i<terminalRoots.Length;i++) if(terminalRoots[i]==root) return i; return -1; }
         private int NextGeneration(int current) { return current == int.MaxValue ? 1 : current + 1; }
         private float RetryDelay() { return .15f + _claimAttempts * .1f; }
+        private float VerifyRetryDelay() { return Mathf.Min(.25f * _verifyAttempts, 1f); }
+        private void AnnouncePrepareFailed() { if (!_announceReady) return; _announceReady = false; SetStatus(PrepareFailedStatus); }
         private void Sync() { if (Networking.IsOwner(gameObject)) { _resend = true; RequestSerialization(); } }
         private void SetStatus(string value) { if (statusText != null) statusText.text = value; }
         public override void OnPlayerLeft(VRCPlayerApi player)
