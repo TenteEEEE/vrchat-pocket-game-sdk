@@ -310,7 +310,7 @@ namespace VrcPocketGame.Editor
                 }
                 else if (phase == 15)
                 {
-                    Debug.Log("[Pocket Game SDK] Smoke phase 15: terminal ownership refused for 5 s.");
+                    Debug.Log("[Pocket Game SDK] Smoke phase 15: terminal ownership refused for 3 s.");
                     Check(!root.activeSelf, "terminal stowed before the refused claim");
                     SpawnRemotePlayer();
                     var roots = (GameObject[])pool.GetProgramVariable("terminalRoots");
@@ -321,13 +321,15 @@ namespace VrcPocketGame.Editor
                     denyRoots = true;
                     denyStart = EditorApplication.timeSinceStartup;
                     pool.Interact();
-                    Advance(16, 5);
+                    Advance(16, 3);
                 }
                 else if (phase == 16)
                 {
-                    denyRoots = false;
+                    // Longer than the old 1.9 s give-up, well inside the 5.2 s verification budget.
                     int slot = Array.FindIndex((int[])pool.GetProgramVariable("claimedPlayerIds"), id => id == Networking.LocalPlayer.playerId);
-                    Check(slot >= 0, "claim survives 5 s of refused terminal ownership (status: " + PoolStatus() + ")");
+                    Check(slot >= 0, "claim survives 3 s of refused terminal ownership (status: " + PoolStatus() + ")");
+                    Check(PoolStatus() == "Preparing your game…", "kiosk shows the game is still being prepared (status: " + PoolStatus() + ")");
+                    denyRoots = false;
                     root = ((GameObject[])pool.GetProgramVariable("terminalRoots"))[slot];
                     Advance(17, 4);
                 }
@@ -336,6 +338,7 @@ namespace VrcPocketGame.Editor
                     var claimSession = FindIn(root, "PocketGameTerminalSession");
                     Check(Networking.IsOwner(root) && Networking.IsOwner(claimSession.gameObject), "claimant owns the terminal once ownership is granted");
                     Check((int)claimSession.GetProgramVariable("assignedPlayerId") == Networking.LocalPlayer.playerId, "session accepted after the refusal ends");
+                    Check(PoolStatus() == "Game ready.", "kiosk announces the game once the session is accepted (status: " + PoolStatus() + ")");
                     Networking._SetOwner -= denyHook; denyHook = null;
                     RemoveRemotePlayer(remote);
                     Debug.Log("[Pocket Game SDK] ClientSim smoke PASS: local UI/persistence checks, simulated remote guards/cleanup, first-claim placement, stale-pose recovery, kiosk-reuse placement, and refused-ownership recovery.");
