@@ -6,10 +6,11 @@ On 2026-09-25, PR #18 (`3de53aa`, kiosk placement after ownership settles) plus 
 
 | Check | #18 applied | Control: pool before #18 (`f543adb`) |
 | --- | --- | --- |
-| Tier 0 ClientSim smoke | Passed, including simulated remote audience, input guard, ownership-request decisions, departure cleanup, first-claim kiosk placement and kiosk reuse | Failed at kiosk reuse (terminal recalled in front of the head) |
+| `InstallAndValidateBatch` from an empty generated folder | Passed, 0 warnings, no `error CS` | — |
+| Tier 0 ClientSim smoke | Passed, including simulated remote audience, input guard, ownership-request decisions, departure cleanup, first-claim kiosk placement, stale previous-owner pose and kiosk reuse | Failed at the stale-pose check: the new claim stayed at the previous owner's pose, 5.00 m from the kiosk front. An earlier ordering of the smoke also failed at kiosk reuse (recalled in front of the head) |
 | Tier 1 MultiSim v0.2.6 / ParrelSync 1.5.2, host A + late-joining client B | Passed twice: late-join sync, B borrows the slot A stowed 5 m away and it appears and stays at the kiosk front on both editors, kiosk reuse, stow/reclaim, cleanup after B leaves; both processes exited 0 | New-claim placement passed; kiosk reuse failed (3.77 m from the kiosk front) |
 
-The audience-object checks were skipped because the counter sample wires no audience objects. The new-claim placement check passes even without #18 because MultiSim transfers ownership immediately and never calls `OnOwnershipRequest`, so it cannot reproduce the race #18 fixes. Tier 2 was not run.
+The audience-object checks were skipped because the counter sample wires no audience objects. The Tier 1 new-claim placement check passes even without #18 because MultiSim transfers ownership immediately and never calls `OnOwnershipRequest`, so it cannot reproduce the race #18 fixes. Tier 0 simulates that race instead: for 0.4 s after the claim, before the first `VerifyClaim`, a simulated previous owner keeps the root and keeps writing its old pose. Tier 2 was not run.
 
 On 2026-09-23, a documentation audit of `main` after 0.4.0 ran `python -X utf8 Tools/verify-package.py` successfully and checked local Markdown links. This static check does not replace Unity compilation, scene validation, or ClientSim testing.
 

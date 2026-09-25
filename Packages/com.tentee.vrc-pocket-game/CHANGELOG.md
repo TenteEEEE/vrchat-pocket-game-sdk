@@ -18,8 +18,8 @@
 
 ### Tests
 
-- The ClientSim smoke now checks a simulated remote player's terminal audience and input guard, `OnOwnershipRequest` decisions, departure cleanup, first-claim kiosk placement and kiosk reuse.
-- Added an optional two-editor smoke under `Tests~/MultiSim` for VRChat MultiSim and ParrelSync validation projects. It is not a package dependency.
+- The ClientSim smoke now checks a simulated remote player's terminal audience and input guard, `OnOwnershipRequest` decisions, departure cleanup, first-claim kiosk placement, recovery from a stale previous-owner pose, and kiosk reuse.
+- Added an optional two-editor smoke and a run script under `Tests~/MultiSim` for VRChat MultiSim and ParrelSync validation projects. It is not a package dependency.
 
 
 ## [0.4.0] - 2026-09-23
